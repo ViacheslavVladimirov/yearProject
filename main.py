@@ -1,10 +1,10 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QMainWindow, QTabWidget
 
-from ui.orders_tab import OrdersTab
-from ui.products_tab import ProductsTab
-from ui.customers_tab import CustomersTab
-from ui.overview_tab import OverviewTab
+from orders_tab import OrdersTab
+from products_tab import ProductsTab
+from customers_tab import CustomersTab
+from overview_tab import OverviewTab
 
 class OrderEditorWindow(QMainWindow):
     def __init__(self):
