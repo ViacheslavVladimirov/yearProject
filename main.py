@@ -47,6 +47,9 @@ class OrderEditorWindow(QMainWindow):
             self.customer_data, self.product_data
         )
         self.overview_controller = OverviewController(self.order_data, self.overview_tab)
+        
+        # Link OrderController to OverviewController since models no longer notify
+        self.order_controller.on_orders_changed_callbacks.append(self.overview_controller.update_view)
 
         # Create a central widget and a layout
         central_widget = QWidget()

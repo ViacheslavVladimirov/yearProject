@@ -1,12 +1,10 @@
 from PyQt6.QtWidgets import QMessageBox
+from .db_utils import get_connection
 
 class CustomerController:
     def __init__(self, model, view):
         self.model = model
         self.view = view
-
-        # Connect model callbacks to view updates
-        self.model.on_data_changed.append(self.update_view)
 
         # Connect view signals to controller actions
         self.view.add_requested.connect(self.on_add_requested)
@@ -18,8 +16,18 @@ class CustomerController:
         # Initial view update
         self.update_view()
 
+    def get_all_customers(self):
+        customers = []
+        conn = get_connection()
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM customers")
+            customers = cursor.fetchall()
+            conn.close()
+        return customers
+
     def update_view(self):
-        self.view.display_customers(self.model.get_all())
+        self.view.display_customers(self.get_all_customers())
 
     def on_add_requested(self):
         self.current_edit_index = -1
@@ -27,8 +35,10 @@ class CustomerController:
 
     def on_edit_requested(self, index):
         self.current_edit_index = index
-        customer_data = self.model.get_all()[index]
-        self.view.show_form(customer_data)
+        customers = self.get_all_customers()
+        if 0 <= index < len(customers):
+            customer_data = customers[index]
+            self.view.show_form(customer_data)
 
     def on_delete_requested(self, index):
         reply = QMessageBox.question(
@@ -38,13 +48,37 @@ class CustomerController:
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self.model.delete(index)
+            customers = self.get_all_customers()
+            if 0 <= index < len(customers):
+                customer_id = customers[index]['id']
+                conn = get_connection()
+                if conn:
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM customers WHERE id=%s", (customer_id,))
+                    conn.commit()
+                    conn.close()
+                    self.update_view()
 
     def on_save_requested(self, data):
-        if self.current_edit_index == -1:
-            self.model.add(data)
-        else:
-            self.model.update(self.current_edit_index, data)
+        conn = get_connection()
+        if conn:
+            cursor = conn.cursor()
+            if self.current_edit_index == -1:
+                cursor.execute(
+                    "INSERT INTO customers (name, email, phone) VALUES (%s, %s, %s)",
+                    (data['name'], data['email'], data['phone'])
+                )
+            else:
+                customers = self.get_all_customers()
+                if 0 <= self.current_edit_index < len(customers):
+                    customer_id = customers[self.current_edit_index]['id']
+                    cursor.execute(
+                        "UPDATE customers SET name=%s, email=%s, phone=%s WHERE id=%s",
+                        (data['name'], data['email'], data['phone'], customer_id)
+                    )
+            conn.commit()
+            conn.close()
+            self.update_view()
         self.view.show_table()
 
     def on_cancel_requested(self):
