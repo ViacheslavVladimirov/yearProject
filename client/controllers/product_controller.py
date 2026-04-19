@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QMessageBox
-from .db_utils import get_connection
+from .db_utils import get_all_products, create_product, update_product, delete_product
+from models.product import Product
 
 class ProductController:
     def __init__(self, view):
@@ -15,18 +16,10 @@ class ProductController:
         # Initial view update
         self.update_view()
 
-    def get_all_products(self):
-        products = []
-        conn = get_connection()
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM products")
-            products = cursor.fetchall()
-            conn.close()
-        return products
-
     def update_view(self):
-        self.view.display_products(self.get_all_products())
+        raw_products = get_all_products() or []
+        products = [Product.deserialize(p).serialize() for p in raw_products]
+        self.view.display_products(products)
 
     def on_add_requested(self):
         self.current_edit_index = -1
@@ -34,9 +27,9 @@ class ProductController:
 
     def on_edit_requested(self, index):
         self.current_edit_index = index
-        products = self.get_all_products()
-        if 0 <= index < len(products):
-            product_data = products[index]
+        raw_products = get_all_products()
+        if raw_products and 0 <= index < len(raw_products):
+            product_data = Product.deserialize(raw_products[index]).serialize()
             self.view.show_form(product_data)
 
     def on_delete_requested(self, index):
@@ -47,37 +40,23 @@ class ProductController:
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            products = self.get_all_products()
-            if 0 <= index < len(products):
-                product_id = products[index]['id']
-                conn = get_connection()
-                if conn:
-                    cursor = conn.cursor()
-                    cursor.execute("DELETE FROM products WHERE id=%s", (product_id,))
-                    conn.commit()
-                    conn.close()
-                    self.update_view()
+            raw_products = get_all_products()
+            if raw_products and 0 <= index < len(raw_products):
+                product_id = raw_products[index]['id']
+                delete_product(product_id)
+                self.update_view()
 
     def on_save_requested(self, data):
-        conn = get_connection()
-        if conn:
-            cursor = conn.cursor()
-            if self.current_edit_index == -1:
-                cursor.execute(
-                    "INSERT INTO products (name, price, stock) VALUES (%s, %s, %s)",
-                    (data['name'], data['price'], data['stock'])
-                )
-            else:
-                products = self.get_all_products()
-                if 0 <= self.current_edit_index < len(products):
-                    product_id = products[self.current_edit_index]['id']
-                    cursor.execute(
-                        "UPDATE products SET name=%s, price=%s, stock=%s WHERE id=%s",
-                        (data['name'], data['price'], data['stock'], product_id)
-                    )
-            conn.commit()
-            conn.close()
-            self.update_view()
+        product = Product.deserialize(data)
+        payload = product.serialize()
+        if self.current_edit_index == -1:
+            create_product(payload)
+        else:
+            raw_products = get_all_products()
+            if raw_products and 0 <= self.current_edit_index < len(raw_products):
+                product_id = raw_products[self.current_edit_index]['id']
+                update_product(product_id, payload)
+        self.update_view()
         self.view.show_table()
 
     def on_cancel_requested(self):

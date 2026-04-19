@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QLabel
 )
 from PyQt6.QtCore import pyqtSignal
-from client.views.forms.product_form import ProductForm
+from views.forms.product_form import ProductForm
 
 class ProductsView(QWidget):
     add_requested = pyqtSignal()

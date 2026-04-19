@@ -1,4 +1,7 @@
-from .db_utils import get_connection
+from .db_utils import get_all_orders, create_order, update_order, get_all_customers, get_all_products
+from models.order import Order
+from models.customer import Customer
+from models.product import Product
 
 class OrderController:
     def __init__(self, view, customer_view, product_view):
@@ -6,8 +9,6 @@ class OrderController:
         self.customer_view = customer_view
         self.product_view = product_view
         
-        # We need a way to notify overview, since model notifications are gone.
-        # In this refactor, we can either pass the overview controller or use a callback.
         self.on_orders_changed_callbacks = []
 
         self.view.add_requested.connect(self.on_add_requested)
@@ -18,101 +19,84 @@ class OrderController:
 
         self.update_view()
 
-    def get_all_orders(self):
+    def get_orders_processed(self):
+        raw_orders = get_all_orders() or []
         orders = []
-        conn = get_connection()
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM orders")
-            orders = cursor.fetchall()
+        for ro in raw_orders:
+            order_obj = Order.deserialize(ro)
+            # Add fields for UI display that aren't in the model but derived
+            # Or ensure model has them.
+            data = order_obj.serialize()
+            data['date'] = str(ro.get('order_date', ''))
+            data['customer'] = ro.get('customer_name', '')
+            data['payment'] = ro.get('payment_method', '')
+            data['status'] = ro.get('status', '')
+            data['total'] = float(ro.get('total_price', 0.0))
             
-            # Fetch items for each order
-            for order in orders:
-                cursor.execute("SELECT product_name as name, price, amount FROM order_items WHERE order_id = %s", (order['id'],))
-                order['items'] = cursor.fetchall()
-                # Mapping for UI
-                order['date'] = str(order['order_date'])
-                order['customer'] = order['customer_name']
-                order['payment'] = order['payment_method']
-                order['total'] = float(order['total_price'])
-            
-            conn.close()
+            # Map item keys for UI
+            processed_items = []
+            for item in ro.get('items', []):
+                processed_items.append({
+                    'name': item.get('product_name', ''),
+                    'price': item.get('price', 0.0),
+                    'amount': item.get('amount', 0)
+                })
+            data['items'] = processed_items
+            orders.append(data)
         return orders
 
     def update_view(self):
-        self.view.display_orders(self.get_all_orders())
+        self.view.display_orders(self.get_orders_processed())
         for callback in self.on_orders_changed_callbacks:
             callback()
 
     def on_add_requested(self):
         self.current_edit_index = -1
-        # Need to fetch customers and products from DB/Models (Models are now just containers, 
-        # so we fetch from DB via local logic or helper)
-        customers = self.get_all_customers_names()
-        products = self.get_all_products()
+        raw_customers = get_all_customers() or []
+        customers = [Customer.deserialize(c).name for c in raw_customers]
+        raw_products = get_all_products() or []
+        products = [Product.deserialize(p).serialize() for p in raw_products]
         self.view.show_form(None, customers, products)
-
-    def get_all_customers_names(self):
-        names = []
-        conn = get_connection()
-        if conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM customers")
-            names = [row[0] for row in cursor.fetchall()]
-            conn.close()
-        return names
-
-    def get_all_products(self):
-        products = []
-        conn = get_connection()
-        if conn:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM products")
-            products = cursor.fetchall()
-            conn.close()
-        return products
 
     def on_view_requested(self, index):
         self.current_edit_index = index
-        orders = self.get_all_orders()
+        orders = self.get_orders_processed()
         if 0 <= index < len(orders):
             order_data = orders[index]
-            customers = self.get_all_customers_names()
-            products = self.get_all_products()
+            raw_customers = get_all_customers() or []
+            customers = [Customer.deserialize(c).name for c in raw_customers]
+            raw_products = get_all_products() or []
+            products = [Product.deserialize(p).serialize() for p in raw_products]
             self.view.show_view_mode(order_data, customers, products)
 
     def on_save_requested(self, data):
-        conn = get_connection()
-        if conn:
-            cursor = conn.cursor()
-            if self.current_edit_index == -1:
-                cursor.execute(
-                    "INSERT INTO orders (order_date, customer_name, payment_method, status, total_price) VALUES (%s, %s, %s, %s, %s)",
-                    (data['date'], data['customer'], data['payment'], data['status'], data['total'])
-                )
-                order_id = cursor.lastrowid
-                for item in data.get('items', []):
-                    cursor.execute(
-                        "INSERT INTO order_items (order_id, product_name, price, amount) VALUES (%s, %s, %s, %s)",
-                        (order_id, item['name'], item['price'], item['amount'])
-                    )
-            else:
-                orders = self.get_all_orders()
-                if 0 <= self.current_edit_index < len(orders):
-                    order_id = orders[self.current_edit_index]['id']
-                    cursor.execute(
-                        "UPDATE orders SET order_date=%s, customer_name=%s, payment_method=%s, status=%s, total_price=%s WHERE id=%s",
-                        (data['date'], data['customer'], data['payment'], data['status'], data['total'], order_id)
-                    )
-                    cursor.execute("DELETE FROM order_items WHERE order_id = %s", (order_id,))
-                    for item in data.get('items', []):
-                        cursor.execute(
-                            "INSERT INTO order_items (order_id, product_name, price, amount) VALUES (%s, %s, %s, %s)",
-                            (order_id, item['name'], item['price'], item['amount'])
-                        )
-            conn.commit()
-            conn.close()
-            self.update_view()
+        # Remap from view format to model/server format
+        items = []
+        for item in data.get('items', []):
+            items.append({
+                'product_name': item['name'],
+                'price': item['price'],
+                'amount': item['amount']
+            })
+        
+        payload = {
+            'date': data['date'],
+            'customer': data['customer'],
+            'payment': data['payment'],
+            'status': data['status'],
+            'total': data['total'],
+            'items': items
+        }
+
+        if self.current_edit_index == -1:
+            create_order(payload)
+        else:
+            orders = self.get_orders_processed()
+            if 0 <= self.current_edit_index < len(orders):
+                order_id = orders[self.current_edit_index]['id']
+                update_order(order_id, payload)
+        
+        self.update_view()
         self.view.show_table()
 
     def on_cancel_requested(self):
@@ -120,12 +104,12 @@ class OrderController:
 
     def on_collect_requested(self):
         if self.current_edit_index >= 0:
-            orders = self.get_all_orders()
+            orders = self.get_orders_processed()
             if self.current_edit_index < len(orders):
                 order_data = orders[self.current_edit_index]
                 current_payment = order_data.get('payment', 'None')
                 
-                if current_payment == "None":
+                if current_payment == "None" or not current_payment:
                     payment = self.view.show_payment_dialog(current_payment)
                     if payment:
                         current_payment = payment
@@ -135,19 +119,30 @@ class OrderController:
                 order_data['payment'] = current_payment
                 order_data['status'] = "Yes"
                 
-                # Update in DB
-                conn = get_connection()
-                if conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        "UPDATE orders SET payment_method=%s, status=%s WHERE id=%s",
-                        (order_data['payment'], order_data['status'], order_data['id'])
-                    )
-                    conn.commit()
-                    conn.close()
-                    self.update_view()
+                # Payload for server update, remapping items
+                items = []
+                for item in order_data.get('items', []):
+                    items.append({
+                        'product_name': item['name'],
+                        'price': item['price'],
+                        'amount': item['amount']
+                    })
+
+                payload = {
+                    'date': order_data['date'],
+                    'customer': order_data['customer'],
+                    'payment': order_data['payment'],
+                    'status': order_data['status'],
+                    'total': order_data['total'],
+                    'items': items
+                }
                 
-                # Re-show in view mode to refresh
-                customers = self.get_all_customers_names()
-                products = self.get_all_products()
+                update_order(order_data['id'], payload)
+                self.update_view()
+                
+                # Refresh view mode
+                raw_customers = get_all_customers() or []
+                customers = [Customer.deserialize(c).name for c in raw_customers]
+                raw_products = get_all_products() or []
+                products = [Product.deserialize(p).serialize() for p in raw_products]
                 self.view.show_view_mode(order_data, customers, products)

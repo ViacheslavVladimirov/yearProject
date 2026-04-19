@@ -1,84 +1,81 @@
-import mysql.connector
-from mysql.connector import Error
+import socket
+import json
 
-def get_connection():
+SERVER_HOST = 'localhost'
+SERVER_PORT = 9999
+
+def recv_all(sock):
+    data = b''
+    while True:
+        part = sock.recv(4096)
+        if not part:
+            break
+        data += part
+    return data.decode('utf-8')
+
+def send_command(command):
     try:
-        connection = mysql.connector.connect(
-            host="localhost",
-            port="3306",
-            user="root",
-            password="1234",
-            database="year_project"
-        )
-        return connection
-    except Error as e:
-        if e.errno == 1049: # Unknown database
-            # Try connecting without database to create it
-            temp_conn = mysql.connector.connect(
-                host="localhost",
-                port="3306",
-                user="root",
-                password="1234"
-            )
-            cursor = temp_conn.cursor()
-            cursor.execute("CREATE DATABASE year_project")
-            temp_conn.close()
-            return get_connection()
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((SERVER_HOST, SERVER_PORT))
+        client.send(command.encode('utf-8'))
+        
+        # Shutdown sending to let the server know we're done
+        client.shutdown(socket.SHUT_WR)
+        
+        response = recv_all(client)
+        client.close()
+        
+        if response.startswith("OK"):
+            if len(response) > 3:
+                try:
+                    return json.loads(response[3:])
+                except json.JSONDecodeError as e:
+                    print(f"JSON error: {e}")
+                    return response[3:]
+            return True
         else:
-            print(f"Error: {e}")
+            print(f"Server error: {response}")
             return None
+    except Exception as e:
+        print(f"Network error: {e}")
+        return None
 
-def init_db():
-    conn = get_connection()
-    if conn:
-        cursor = conn.cursor()
-        
-        # Create Customers table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS customers (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255),
-                phone VARCHAR(50)
-            )
-        """)
-        
-        # Create Products table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS products (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                price DECIMAL(10, 2),
-                stock INT
-            )
-        """)
-        
-        # Create Orders table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS orders (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                order_date DATE,
-                customer_name VARCHAR(255),
-                payment_method VARCHAR(50),
-                status VARCHAR(50),
-                total_price DECIMAL(10, 2)
-            )
-        """)
-        
-        # Create Order Items table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS order_items (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                order_id INT,
-                product_name VARCHAR(255),
-                price DECIMAL(10, 2),
-                amount INT,
-                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
-            )
-        """)
-        
-        conn.commit()
-        conn.close()
+# These functions mimic the old direct DB access but use the network protocol
+def get_all_products():
+    return send_command("LIST PRODUCTS")
 
-if __name__ == "__main__":
-    init_db()
+def get_all_customers():
+    return send_command("LIST CUSTOMERS")
+
+def get_all_orders():
+    return send_command("LIST ORDERS")
+
+def create_product(data):
+    return send_command(f"CREATE PRODUCT {json.dumps(data)}")
+
+def update_product(product_id, data):
+    return send_command(f"UPDATE PRODUCT {product_id} {json.dumps(data)}")
+
+def delete_product(product_id):
+    return send_command(f"DELETE PRODUCT {product_id}")
+
+def create_customer(data):
+    return send_command(f"CREATE CUSTOMER {json.dumps(data)}")
+
+def update_customer(customer_id, data):
+    return send_command(f"UPDATE CUSTOMER {customer_id} {json.dumps(data)}")
+
+def delete_customer(customer_id):
+    return send_command(f"DELETE CUSTOMER {customer_id}")
+
+def create_order(data):
+    return send_command(f"CREATE ORDER {json.dumps(data)}")
+
+def update_order(order_id, data):
+    return send_command(f"UPDATE ORDER {order_id} {json.dumps(data)}")
+
+def delete_order(order_id):
+    return send_command(f"DELETE ORDER {order_id}")
+
+def get_stats():
+    return send_command("GET STATS")
