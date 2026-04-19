@@ -1,11 +1,10 @@
 from .db_utils import get_connection
 
 class OrderController:
-    def __init__(self, model, view, customer_model, product_model):
-        self.model = model
+    def __init__(self, view, customer_view, product_view):
         self.view = view
-        self.customer_model = customer_model
-        self.product_model = product_model
+        self.customer_view = customer_view
+        self.product_view = product_view
         
         # We need a way to notify overview, since model notifications are gone.
         # In this refactor, we can either pass the overview controller or use a callback.

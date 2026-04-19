@@ -1,8 +1,7 @@
 from .db_utils import get_connection
 
 class OverviewController:
-    def __init__(self, model, view):
-        self.model = model # This model object is now mostly just a placeholder/container
+    def __init__(self, view):
         self.view = view
         self.update_view()
 

@@ -2,8 +2,7 @@ from PyQt6.QtWidgets import QMessageBox
 from .db_utils import get_connection
 
 class ProductController:
-    def __init__(self, model, view):
-        self.model = model
+    def __init__(self, view):
         self.view = view
 
         # Connect view signals to controller actions

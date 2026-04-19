@@ -6,10 +6,6 @@ from views.products_view import ProductsView
 from views.customers_view import CustomersView
 from views.overview_view import OverviewView
 
-from models.customer import Customer
-from models.product import Product
-from models.order import Order
-
 from controllers.customer_controller import CustomerController
 from controllers.product_controller import ProductController
 from controllers.order_controller import OrderController
@@ -28,11 +24,6 @@ class OrderEditorWindow(QMainWindow):
         self.setWindowTitle("Order Editor - MVC Structural Refactor")
         self.setGeometry(100, 100, 1000, 700)
 
-        # Initialize Models (Removing 'Model' suffix)
-        self.customer_data = Customer()
-        self.product_data = Product()
-        self.order_data = Order()
-
         # Initialize Views
         self.orders_tab = OrdersView()
         self.products_tab = ProductsView()
@@ -40,13 +31,13 @@ class OrderEditorWindow(QMainWindow):
         self.overview_tab = OverviewView()
 
         # Initialize Controllers
-        self.customer_controller = CustomerController(self.customer_data, self.customers_tab)
-        self.product_controller = ProductController(self.product_data, self.products_tab)
+        self.customer_controller = CustomerController(self.customers_tab)
+        self.product_controller = ProductController(self.products_tab)
         self.order_controller = OrderController(
-            self.order_data, self.orders_tab, 
-            self.customer_data, self.product_data
+            self.orders_tab, 
+            self.customers_tab, self.products_tab
         )
-        self.overview_controller = OverviewController(self.order_data, self.overview_tab)
+        self.overview_controller = OverviewController(self.overview_tab)
         
         # Link OrderController to OverviewController since models no longer notify
         self.order_controller.on_orders_changed_callbacks.append(self.overview_controller.update_view)
