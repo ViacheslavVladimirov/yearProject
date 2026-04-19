@@ -3,7 +3,7 @@ class OverviewController:
         self.model = model # Order model
         self.view = view
 
-        self.model.data_changed.connect(self.update_view)
+        self.model.on_data_changed.append(self.update_view)
         self.update_view()
 
     def update_view(self):

@@ -5,7 +5,7 @@ class ProductController:
         self.model = model
         self.view = view
 
-        self.model.data_changed.connect(self.update_view)
+        self.model.on_data_changed.append(self.update_view)
 
         self.view.add_requested.connect(self.on_add_requested)
         self.view.edit_requested.connect(self.on_edit_requested)

@@ -5,7 +5,7 @@ class OrderController:
         self.customer_model = customer_model
         self.product_model = product_model
 
-        self.model.data_changed.connect(self.update_view)
+        self.model.on_data_changed.append(self.update_view)
 
         self.view.add_requested.connect(self.on_add_requested)
         self.view.view_requested.connect(self.on_view_requested)

@@ -5,8 +5,8 @@ class CustomerController:
         self.model = model
         self.view = view
 
-        # Connect model signals to view updates
-        self.model.data_changed.connect(self.update_view)
+        # Connect model callbacks to view updates
+        self.model.on_data_changed.append(self.update_view)
 
         # Connect view signals to controller actions
         self.view.add_requested.connect(self.on_add_requested)
