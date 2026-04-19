@@ -1,10 +1,10 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QHeaderView, 
-    QAbstractItemView, QMessageBox, QStackedWidget, 
+    QAbstractItemView, QStackedWidget, 
     QLineEdit, QLabel, QFormLayout
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 class ProductForm(QWidget):
     def __init__(self, on_save, on_cancel):
@@ -55,11 +55,15 @@ class ProductForm(QWidget):
         self.stock_input.clear()
 
 class ProductsTab(QWidget):
+    add_requested = pyqtSignal()
+    edit_requested = pyqtSignal(int)
+    delete_requested = pyqtSignal(int)
+    save_requested = pyqtSignal(dict)
+    cancel_requested = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-        self.current_edit_row = -1
         self.setup_ui()
-        self.load_sample_data()
 
     def setup_ui(self):
         """Creates the products management interface."""
@@ -106,25 +110,36 @@ class ProductsTab(QWidget):
         table_layout.addLayout(button_layout)
         
         # Page 2: Form View
-        self.form_page = ProductForm(on_save=self.on_save, on_cancel=self.on_cancel)
+        self.form_page = ProductForm(
+            on_save=lambda: self.save_requested.emit(self.form_page.get_data()), 
+            on_cancel=lambda: self.cancel_requested.emit()
+        )
 
         self.stack.addWidget(self.table_page)
         self.stack.addWidget(self.form_page)
 
         # Connect signals
         self.products_table.itemSelectionChanged.connect(self.update_buttons_state)
-        self.add_prod_btn.clicked.connect(self.on_add)
-        self.edit_prod_btn.clicked.connect(self.on_edit)
-        self.delete_prod_btn.clicked.connect(self.on_delete)
+        self.add_prod_btn.clicked.connect(self.add_requested.emit)
+        self.edit_prod_btn.clicked.connect(self._on_edit_clicked)
+        self.delete_prod_btn.clicked.connect(self._on_delete_clicked)
+
+    def _on_edit_clicked(self):
+        row = self.products_table.currentRow()
+        if row >= 0:
+            self.edit_requested.emit(row)
+
+    def _on_delete_clicked(self):
+        row = self.products_table.currentRow()
+        if row >= 0:
+            self.delete_requested.emit(row)
 
     def update_buttons_state(self):
-        """Enables/disables buttons based on table selection."""
         has_selection = len(self.products_table.selectedItems()) > 0
         self.edit_prod_btn.setEnabled(has_selection)
         self.delete_prod_btn.setEnabled(has_selection)
 
     def filter_products(self, text):
-        """Hides rows that don't match the search text."""
         search_text = text.lower()
         for row in range(self.products_table.rowCount()):
             match = False
@@ -135,85 +150,20 @@ class ProductsTab(QWidget):
                     break
             self.products_table.setRowHidden(row, not match)
 
-    def on_add(self):
-        """Switches to form view to add a new product."""
-        self.current_edit_row = -1
-        self.form_page.clear()
+    def display_products(self, products):
+        self.products_table.setRowCount(len(products))
+        for row, product in enumerate(products):
+            self.products_table.setItem(row, 0, QTableWidgetItem(product['name']))
+            self.products_table.setItem(row, 1, QTableWidgetItem(product['price']))
+            self.products_table.setItem(row, 2, QTableWidgetItem(product['stock']))
+        self.filter_products(self.search_input.text())
+
+    def show_form(self, product_data=None):
+        if product_data:
+            self.form_page.set_data(product_data)
+        else:
+            self.form_page.clear()
         self.stack.setCurrentWidget(self.form_page)
 
-    def on_edit(self):
-        """Switches to form view to edit the selected product."""
-        selected_row = self.products_table.currentRow()
-        if selected_row >= 0:
-            self.current_edit_row = selected_row
-            product_data = {
-                'name': self.products_table.item(selected_row, 0).text(),
-                'price': self.products_table.item(selected_row, 1).text(),
-                'stock': self.products_table.item(selected_row, 2).text(),
-            }
-            self.form_page.set_data(product_data)
-            self.stack.setCurrentWidget(self.form_page)
-
-    def on_save(self):
-        """Saves product data and returns to table view."""
-        data = self.form_page.get_data()
-        
-        if self.current_edit_row == -1:
-            # Adding new
-            row = self.products_table.rowCount()
-            self.products_table.insertRow(row)
-            self.products_table.setItem(row, 0, QTableWidgetItem(data['name']))
-            self.products_table.setItem(row, 1, QTableWidgetItem(data['price']))
-            self.products_table.setItem(row, 2, QTableWidgetItem(data['stock']))
-        else:
-            # Editing existing
-            row = self.current_edit_row
-            self.products_table.setItem(row, 0, QTableWidgetItem(data['name']))
-            self.products_table.setItem(row, 1, QTableWidgetItem(data['price']))
-            self.products_table.setItem(row, 2, QTableWidgetItem(data['stock']))
-        
+    def show_table(self):
         self.stack.setCurrentWidget(self.table_page)
-
-    def on_cancel(self):
-        """Returns to table view without saving."""
-        self.stack.setCurrentWidget(self.table_page)
-
-    def on_delete(self):
-        """Removes the selected product from the table."""
-        selected_row = self.products_table.currentRow()
-        if selected_row >= 0:
-            reply = QMessageBox.question(
-                self, 'Delete Product',
-                'Are you sure you want to delete this product?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
-                QMessageBox.StandardButton.No
-            )
-
-            if reply == QMessageBox.StandardButton.Yes:
-                self.products_table.removeRow(selected_row)
-
-    def get_products(self):
-        """Returns a list of product data (name, price)."""
-        products = []
-        for row in range(self.products_table.rowCount()):
-            name = self.products_table.item(row, 0).text()
-            price = self.products_table.item(row, 1).text()
-            products.append({'name': name, 'price': price})
-        return products
-
-    def load_sample_data(self):
-        """Populates the table with sample product data."""
-        sample_products = [
-            ("Laptop", "999.99", "15"),
-            ("Mouse", "25.50", "120"),
-            ("Keyboard", "45.00", "50"),
-            ("Monitor", "199.99", "30"),
-            ("USB Cable", "9.99", "200")
-        ]
-
-        self.products_table.setRowCount(len(sample_products))
-        
-        for row, (name, price, stock) in enumerate(sample_products):
-            self.products_table.setItem(row, 0, QTableWidgetItem(name))
-            self.products_table.setItem(row, 1, QTableWidgetItem(price))
-            self.products_table.setItem(row, 2, QTableWidgetItem(stock))

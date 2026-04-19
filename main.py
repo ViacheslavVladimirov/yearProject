@@ -6,24 +6,36 @@ from products_tab import ProductsTab
 from customers_tab import CustomersTab
 from overview_tab import OverviewTab
 
+from models import CustomerModel, ProductModel, OrderModel
+from controllers import CustomerController, ProductController, OrderController, OverviewController
+
 class OrderEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # Set window title and geometry
-        self.setWindowTitle("Order Editor")
+        self.setWindowTitle("Order Editor - MVC Version")
         self.setGeometry(100, 100, 1000, 700)
 
-        # Create tabs first so they can reference each other
-        self.customers_tab = CustomersTab()
+        # Initialize Models
+        self.customer_model = CustomerModel()
+        self.product_model = ProductModel()
+        self.order_model = OrderModel()
+
+        # Initialize Views
+        self.orders_tab = OrdersTab()
         self.products_tab = ProductsTab()
-        # Pass callbacks to get customers and products
-        self.orders_tab = OrdersTab(
-            get_customers_callback=self.customers_tab.get_customers,
-            get_products_callback=self.products_tab.get_products
+        self.customers_tab = CustomersTab()
+        self.overview_tab = OverviewTab()
+
+        # Initialize Controllers
+        self.customer_controller = CustomerController(self.customer_model, self.customers_tab)
+        self.product_controller = ProductController(self.product_model, self.products_tab)
+        self.order_controller = OrderController(
+            self.order_model, self.orders_tab, 
+            self.customer_model, self.product_model
         )
-        # Create overview tab with callback to get orders
-        self.overview_tab = OverviewTab(get_orders_callback=self.orders_tab.get_orders)
+        self.overview_controller = OverviewController(self.order_model, self.overview_tab)
 
         # Create a central widget and a layout
         central_widget = QWidget()
@@ -41,14 +53,6 @@ class OrderEditorWindow(QMainWindow):
 
         # Add tabs to layout
         layout.addWidget(self.tabs)
-        
-        # Refresh overview when tab is changed to it
-        self.tabs.currentChanged.connect(self.on_tab_changed)
-
-    def on_tab_changed(self, index):
-        """Refreshes the overview tab if it's the current tab."""
-        if self.tabs.widget(index) == self.overview_tab:
-            self.overview_tab.refresh()
 
 def main():
     # Create the application object

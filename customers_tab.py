@@ -1,10 +1,10 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QHeaderView, 
-    QAbstractItemView, QMessageBox, QStackedWidget,
+    QAbstractItemView, QStackedWidget,
     QLineEdit, QLabel, QFormLayout
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 class CustomerForm(QWidget):
     def __init__(self, on_save, on_cancel):
@@ -55,11 +55,15 @@ class CustomerForm(QWidget):
         self.phone_input.clear()
 
 class CustomersTab(QWidget):
+    add_requested = pyqtSignal()
+    edit_requested = pyqtSignal(int)
+    delete_requested = pyqtSignal(int)
+    save_requested = pyqtSignal(dict)
+    cancel_requested = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-        self.current_edit_row = -1
         self.setup_ui()
-        self.load_sample_data()
 
     def setup_ui(self):
         """Creates the customers management interface."""
@@ -85,22 +89,18 @@ class CustomersTab(QWidget):
         self.customers_table.setColumnCount(3)
         self.customers_table.setHorizontalHeaderLabels(["Customer Name", "Email", "Phone Number"])
         
-        # Configure selection behavior
         self.customers_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.customers_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.customers_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
-        # Make columns stretch to fill the width
         header = self.customers_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-        # Buttons Layout
         button_layout = QHBoxLayout()
         self.add_cust_btn = QPushButton("Add Customer")
         self.edit_cust_btn = QPushButton("Edit Customer")
         self.delete_cust_btn = QPushButton("Delete Customer")
 
-        # Initially disable edit/delete
         self.edit_cust_btn.setEnabled(False)
         self.delete_cust_btn.setEnabled(False)
 
@@ -112,25 +112,36 @@ class CustomersTab(QWidget):
         table_layout.addLayout(button_layout)
 
         # Page 2: Form View
-        self.form_page = CustomerForm(on_save=self.on_save, on_cancel=self.on_cancel)
+        self.form_page = CustomerForm(
+            on_save=lambda: self.save_requested.emit(self.form_page.get_data()), 
+            on_cancel=lambda: self.cancel_requested.emit()
+        )
 
         self.stack.addWidget(self.table_page)
         self.stack.addWidget(self.form_page)
 
         # Connect signals
         self.customers_table.itemSelectionChanged.connect(self.update_buttons_state)
-        self.add_cust_btn.clicked.connect(self.on_add)
-        self.edit_cust_btn.clicked.connect(self.on_edit)
-        self.delete_cust_btn.clicked.connect(self.on_delete)
+        self.add_cust_btn.clicked.connect(self.add_requested.emit)
+        self.edit_cust_btn.clicked.connect(self._on_edit_clicked)
+        self.delete_cust_btn.clicked.connect(self._on_delete_clicked)
+
+    def _on_edit_clicked(self):
+        row = self.customers_table.currentRow()
+        if row >= 0:
+            self.edit_requested.emit(row)
+
+    def _on_delete_clicked(self):
+        row = self.customers_table.currentRow()
+        if row >= 0:
+            self.delete_requested.emit(row)
 
     def update_buttons_state(self):
-        """Enables/disables buttons based on table selection."""
         has_selection = len(self.customers_table.selectedItems()) > 0
         self.edit_cust_btn.setEnabled(has_selection)
         self.delete_cust_btn.setEnabled(has_selection)
 
     def filter_customers(self, text):
-        """Hides rows that don't match the search text."""
         search_text = text.lower()
         for row in range(self.customers_table.rowCount()):
             match = False
@@ -141,81 +152,20 @@ class CustomersTab(QWidget):
                     break
             self.customers_table.setRowHidden(row, not match)
 
-    def on_add(self):
-        """Switches to form view to add a new customer."""
-        self.current_edit_row = -1
-        self.form_page.clear()
+    def display_customers(self, customers):
+        self.customers_table.setRowCount(len(customers))
+        for row, customer in enumerate(customers):
+            self.customers_table.setItem(row, 0, QTableWidgetItem(customer['name']))
+            self.customers_table.setItem(row, 1, QTableWidgetItem(customer['email']))
+            self.customers_table.setItem(row, 2, QTableWidgetItem(customer['phone']))
+        self.filter_customers(self.search_input.text())
+
+    def show_form(self, customer_data=None):
+        if customer_data:
+            self.form_page.set_data(customer_data)
+        else:
+            self.form_page.clear()
         self.stack.setCurrentWidget(self.form_page)
 
-    def on_edit(self):
-        """Switches to form view to edit the selected customer."""
-        selected_row = self.customers_table.currentRow()
-        if selected_row >= 0:
-            self.current_edit_row = selected_row
-            customer_data = {
-                'name': self.customers_table.item(selected_row, 0).text(),
-                'email': self.customers_table.item(selected_row, 1).text(),
-                'phone': self.customers_table.item(selected_row, 2).text()
-            }
-            self.form_page.set_data(customer_data)
-            self.stack.setCurrentWidget(self.form_page)
-
-    def on_save(self):
-        """Saves customer data and returns to table view."""
-        data = self.form_page.get_data()
-        
-        if self.current_edit_row == -1:
-            # Adding new
-            row = self.customers_table.rowCount()
-            self.customers_table.insertRow(row)
-            self.customers_table.setItem(row, 0, QTableWidgetItem(data['name']))
-            self.customers_table.setItem(row, 1, QTableWidgetItem(data['email']))
-            self.customers_table.setItem(row, 2, QTableWidgetItem(data['phone']))
-        else:
-            # Editing existing
-            row = self.current_edit_row
-            self.customers_table.setItem(row, 0, QTableWidgetItem(data['name']))
-            self.customers_table.setItem(row, 1, QTableWidgetItem(data['email']))
-            self.customers_table.setItem(row, 2, QTableWidgetItem(data['phone']))
-        
+    def show_table(self):
         self.stack.setCurrentWidget(self.table_page)
-
-    def on_cancel(self):
-        """Returns to table view without saving."""
-        self.stack.setCurrentWidget(self.table_page)
-
-    def on_delete(self):
-        """Removes the selected customer from the table."""
-        selected_row = self.customers_table.currentRow()
-        if selected_row >= 0:
-            reply = QMessageBox.question(
-                self, 'Delete Customer',
-                'Are you sure you want to delete this customer?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
-                QMessageBox.StandardButton.No
-            )
-
-            if reply == QMessageBox.StandardButton.Yes:
-                self.customers_table.removeRow(selected_row)
-
-    def get_customers(self):
-        """Returns a list of customer names."""
-        customers = []
-        for row in range(self.customers_table.rowCount()):
-            item = self.customers_table.item(row, 0)
-            if item:
-                customers.append(item.text())
-        return customers
-
-    def load_sample_data(self):
-        """Populates the table with sample customer data."""
-        sample_customers = [
-            ("John Doe", "john@example.com", "555-0101"),
-            ("Jane Smith", "jane@example.com", "555-0102"),
-            ("Acme Corp", "contact@acme.com", "555-0999")
-        ]
-        self.customers_table.setRowCount(len(sample_customers))
-        for row, (name, email, phone) in enumerate(sample_customers):
-            self.customers_table.setItem(row, 0, QTableWidgetItem(name))
-            self.customers_table.setItem(row, 1, QTableWidgetItem(email))
-            self.customers_table.setItem(row, 2, QTableWidgetItem(phone))

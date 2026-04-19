@@ -2,9 +2,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QLabel, QFrame
 from PyQt6.QtCore import Qt
 
 class OverviewTab(QWidget):
-    def __init__(self, get_orders_callback=None):
+    def __init__(self):
         super().__init__()
-        self.get_orders_callback = get_orders_callback
         self.setup_ui()
 
     def setup_ui(self):
@@ -43,27 +42,6 @@ class OverviewTab(QWidget):
         
         return frame
 
-    def refresh(self):
-        """Updates statistics based on current orders."""
-        if not self.get_orders_callback:
-            return
-
-        orders = self.get_orders_callback()
-        total_products = 0
-        total_revenue = 0.0
-
-        for order in orders:
-            # We only count delivered/paid orders for revenue usually, 
-            # but here we'll count all existing ones as per "transactions"
-            items = order.get('items', [])
-            for item in items:
-                try:
-                    amount = int(item.get('amount', 0))
-                    price = float(item.get('price', 0))
-                    total_products += amount
-                    total_revenue += amount * price
-                except ValueError:
-                    continue
-
+    def display_stats(self, total_products, total_revenue):
         self.products_sold_label.setText(str(total_products))
         self.revenue_label.setText(f"€ {total_revenue:.2f}")

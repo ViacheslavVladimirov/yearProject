@@ -1,10 +1,10 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QHeaderView, 
-    QAbstractItemView, QMessageBox, QStackedWidget, 
+    QAbstractItemView, QStackedWidget, 
     QLineEdit, QLabel, QFormLayout, QComboBox, QDateEdit, QDialog, QCheckBox, QCompleter
 )
-from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtCore import Qt, QDate, pyqtSignal
 
 class OrderItemDialog(QDialog):
     def __init__(self, parent=None, products=None):
@@ -30,11 +30,9 @@ class OrderItemDialog(QDialog):
         layout.addRow("Price:", self.price_input)
         layout.addRow("Amount:", self.amount_input)
 
-        # Update price when product changes
         self.product_combo.currentIndexChanged.connect(self.update_price)
         self.update_price()
 
-        # Buttons
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Add")
         self.cancel_btn = QPushButton("Cancel")
@@ -59,12 +57,12 @@ class OrderItemDialog(QDialog):
         }
 
 class OrderForm(QWidget):
-    def __init__(self, on_save, on_cancel, on_collect=None, get_products_callback=None):
+    def __init__(self, on_save, on_cancel, on_collect=None):
         super().__init__()
         self.on_save_callback = on_save
         self.on_cancel_callback = on_cancel
         self.on_collect_callback = on_collect
-        self.get_products_callback = get_products_callback
+        self.products = []
         self.setup_ui()
 
     def setup_ui(self):
@@ -84,7 +82,6 @@ class OrderForm(QWidget):
         self.status_combo = QComboBox()
         self.status_combo.addItems(["No", "Yes"])
 
-        # Connect payment change to status validation
         self.payment_combo.currentIndexChanged.connect(self.update_status_options)
 
         form_layout.addRow("Date:", self.date_input)
@@ -92,14 +89,12 @@ class OrderForm(QWidget):
         form_layout.addRow("Payment Method:", self.payment_combo)
         form_layout.addRow("Delivered:", self.status_combo)
         
-        # Total Price Display
         self.total_price_label = QLabel("€ 0.00")
         self.total_price_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #2c3e50;")
         form_layout.addRow("Total Price:", self.total_price_label)
         
         layout.addLayout(form_layout)
 
-        # Order Items Table
         layout.addWidget(QLabel("Order Items:"))
         self.items_table = QTableWidget()
         self.items_table.setColumnCount(3)
@@ -110,7 +105,6 @@ class OrderForm(QWidget):
         self.items_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         layout.addWidget(self.items_table)
 
-        # Item Buttons
         self.item_btn_container = QWidget()
         item_btn_layout = QHBoxLayout(self.item_btn_container)
         item_btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -122,7 +116,6 @@ class OrderForm(QWidget):
         item_btn_layout.addWidget(self.remove_item_btn)
         layout.addWidget(self.item_btn_container)
 
-        # Form Buttons
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Save")
         self.collect_btn = QPushButton("Collect Order")
@@ -154,14 +147,12 @@ class OrderForm(QWidget):
         self.close_btn.setVisible(read_only)
         self.collect_btn.setVisible(read_only)
         
-        # Collect button should be enabled if not delivered yet
         if read_only:
             is_delivered = self.status_combo.currentText() == "Yes"
             self.collect_btn.setEnabled(not is_delivered)
 
     def on_add_item(self):
-        products = self.get_products_callback() if self.get_products_callback else []
-        dialog = OrderItemDialog(self, products)
+        dialog = OrderItemDialog(self, self.products)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             data = dialog.get_data()
             row = self.items_table.rowCount()
@@ -175,18 +166,14 @@ class OrderForm(QWidget):
         selected_row = self.items_table.currentRow()
         if selected_row >= 0:
             self.items_table.removeRow(selected_row)
-            # Renumber positions
-            for row in range(self.items_table.rowCount()):
-                self.items_table.setItem(row, 0, QTableWidgetItem(str(row + 1)))
             self.calculate_total()
 
     def calculate_total(self):
-        """Calculates total price from items table."""
         total = 0.0
         for row in range(self.items_table.rowCount()):
             try:
-                price = float(self.items_table.item(row, 2).text())
-                amount = int(self.items_table.item(row, 3).text())
+                price = float(self.items_table.item(row, 1).text())
+                amount = int(self.items_table.item(row, 2).text())
                 total += price * amount
             except (ValueError, AttributeError, TypeError):
                 continue
@@ -194,17 +181,15 @@ class OrderForm(QWidget):
         return total
 
     def update_status_options(self):
-        """Enables/disables 'Yes' in status_combo based on payment_combo."""
         is_paid = self.payment_combo.currentText() != "None"
         if not is_paid:
-            self.status_combo.setCurrentIndex(0) # Force 'No'
-        
-        # Disable/Enable 'Yes' item in the view
+            self.status_combo.setCurrentIndex(0)
         self.status_combo.view().setRowHidden(1, not is_paid)
 
-    def set_data(self, order_data, customers):
+    def set_data(self, order_data, customers, products):
         self.customer_combo.clear()
         self.customer_combo.addItems(customers)
+        self.products = products
         self.items_table.setRowCount(0)
         
         if order_data:
@@ -224,7 +209,6 @@ class OrderForm(QWidget):
             if s_index >= 0:
                 self.status_combo.setCurrentIndex(s_index)
 
-            # Load items
             items = order_data.get('items', [])
             for row, item in enumerate(items):
                 self.items_table.insertRow(row)
@@ -244,9 +228,9 @@ class OrderForm(QWidget):
         items = []
         for row in range(self.items_table.rowCount()):
             items.append({
-                'name': self.items_table.item(row, 1).text(),
-                'price': self.items_table.item(row, 2).text(),
-                'amount': self.items_table.item(row, 3).text()
+                'name': self.items_table.item(row, 0).text(),
+                'price': self.items_table.item(row, 1).text(),
+                'amount': self.items_table.item(row, 2).text()
             })
         return {
             'date': self.date_input.date().toString(Qt.DateFormat.ISODate),
@@ -277,7 +261,6 @@ class PaymentDialog(QDialog):
         form_layout.addRow("Payment Method:", self.payment_combo)
         layout.addLayout(form_layout)
 
-        # Buttons
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Save")
         self.cancel_btn = QPushButton("Cancel")
@@ -289,24 +272,24 @@ class PaymentDialog(QDialog):
         button_layout.addWidget(self.cancel_btn)
         
         layout.addLayout(button_layout)
-
-        # Connect signal and initial check
         self.payment_combo.currentIndexChanged.connect(self.update_save_button)
         self.update_save_button()
 
     def update_save_button(self):
-        """Disables save button if 'None' is selected."""
         self.save_btn.setEnabled(self.payment_combo.currentText() != "None")
 
     def get_payment_method(self):
         return self.payment_combo.currentText()
 
 class OrdersTab(QWidget):
-    def __init__(self, get_customers_callback=None, get_products_callback=None):
+    add_requested = pyqtSignal()
+    view_requested = pyqtSignal(int)
+    save_requested = pyqtSignal(dict)
+    cancel_requested = pyqtSignal()
+    collect_requested = pyqtSignal()
+
+    def __init__(self):
         super().__init__()
-        self.get_customers_callback = get_customers_callback
-        self.get_products_callback = get_products_callback
-        self.current_edit_row = -1
         self.setup_ui()
 
     def setup_ui(self):
@@ -320,7 +303,6 @@ class OrdersTab(QWidget):
         self.table_page = QWidget()
         table_layout = QVBoxLayout(self.table_page)
 
-        # Filter Checkbox
         self.pending_filter_checkbox = QCheckBox("Only pending orders")
         self.pending_filter_checkbox.stateChanged.connect(self.apply_filter)
         table_layout.addWidget(self.pending_filter_checkbox)
@@ -347,10 +329,9 @@ class OrdersTab(QWidget):
         
         # Page 2: Form View
         self.form_page = OrderForm(
-            on_save=self.on_save, 
-            on_cancel=self.on_cancel,
-            on_collect=self.on_collect_order,
-            get_products_callback=self.get_products_callback
+            on_save=lambda: self.save_requested.emit(self.form_page.get_data()), 
+            on_cancel=lambda: self.cancel_requested.emit(),
+            on_collect=lambda: self.collect_requested.emit()
         )
 
         self.stack.addWidget(self.table_page)
@@ -358,82 +339,50 @@ class OrdersTab(QWidget):
 
         # Connect signals
         self.orders_table.itemSelectionChanged.connect(self.update_buttons_state)
-        self.add_order_btn.clicked.connect(self.on_add)
-        self.view_order_btn.clicked.connect(self.on_view)
+        self.add_order_btn.clicked.connect(self.add_requested.emit)
+        self.view_order_btn.clicked.connect(self._on_view_clicked)
+
+    def _on_view_clicked(self):
+        row = self.orders_table.currentRow()
+        if row >= 0:
+            self.view_requested.emit(row)
 
     def update_buttons_state(self):
-        """Enables/disables buttons based on table selection."""
         has_selection = len(self.orders_table.selectedItems()) > 0
         self.view_order_btn.setEnabled(has_selection)
 
-    def on_add(self):
-        """Switches to form view to add a new order."""
-        self.current_edit_row = -1
+    def display_orders(self, orders):
+        self.orders_table.setRowCount(len(orders))
+        for row, order in enumerate(orders):
+            self.orders_table.setItem(row, 0, QTableWidgetItem(order.get('id', '')))
+            self.orders_table.setItem(row, 1, QTableWidgetItem(order.get('date', '')))
+            self.orders_table.setItem(row, 2, QTableWidgetItem(order.get('customer', '')))
+            self.orders_table.setItem(row, 3, QTableWidgetItem(order.get('payment', '')))
+            self.orders_table.setItem(row, 4, QTableWidgetItem(order.get('status', '')))
+            total = order.get('total', 0.0)
+            self.orders_table.setItem(row, 5, QTableWidgetItem(f"€ {total:.2f}"))
+        self.apply_filter()
+
+    def show_form(self, order_data, customers, products):
+        self.form_page.set_data(order_data, customers, products)
         self.form_page.set_read_only(False)
-        customers = self.get_customers_callback() if self.get_customers_callback else []
-        self.form_page.set_data(None, customers)
         self.stack.setCurrentWidget(self.form_page)
 
-    def on_view(self):
-        """Switches to form view to view selected order."""
-        selected_row = self.orders_table.currentRow()
-        if selected_row >= 0:
-            self.current_edit_row = selected_row
-            id_item = self.orders_table.item(selected_row, 0)
-            order_data = id_item.data(Qt.ItemDataRole.UserRole)
-            
-            # Fallback if no data stored yet
-            if not order_data:
-                order_data = {
-                    'id': id_item.text(),
-                    'date': self.orders_table.item(selected_row, 1).text(),
-                    'customer': self.orders_table.item(selected_row, 2).text(),
-                    'payment': self.orders_table.item(selected_row, 3).text(),
-                    'status': self.orders_table.item(selected_row, 4).text(),
-                    'total': self.orders_table.item(selected_row, 5).text().replace("€ ", ""),
-                    'items': []
-                }
-            
-            customers = self.get_customers_callback() if self.get_customers_callback else []
-            self.form_page.set_data(order_data, customers)
-            self.form_page.set_read_only(True)
-            self.stack.setCurrentWidget(self.form_page)
+    def show_view_mode(self, order_data, customers, products):
+        self.form_page.set_data(order_data, customers, products)
+        self.form_page.set_read_only(True)
+        self.stack.setCurrentWidget(self.form_page)
 
-    def on_collect_order(self):
-        """Opens payment dialog if needed and sets status to Delivered."""
-        selected_row = self.current_edit_row
-        if selected_row >= 0:
-            id_item = self.orders_table.item(selected_row, 0)
-            order_data = id_item.data(Qt.ItemDataRole.UserRole)
-            current_payment = self.orders_table.item(selected_row, 3).text()
-            
-            # If not paid, force payment selection
-            if current_payment == "None":
-                dialog = PaymentDialog(self, current_payment)
-                if dialog.exec() == QDialog.DialogCode.Accepted:
-                    current_payment = dialog.get_payment_method()
-                else:
-                    return # User cancelled payment, so we can't collect
+    def show_table(self):
+        self.stack.setCurrentWidget(self.table_page)
 
-            # Update Table
-            self.orders_table.setItem(selected_row, 3, QTableWidgetItem(current_payment))
-            self.orders_table.setItem(selected_row, 4, QTableWidgetItem("Yes"))
-            
-            # Update stored data if it exists
-            if order_data:
-                order_data['payment'] = current_payment
-                order_data['status'] = "Yes"
-                id_item.setData(Qt.ItemDataRole.UserRole, order_data)
-            
-            # Update Form if visible
-            customers = self.get_customers_callback() if self.get_customers_callback else []
-            self.form_page.set_data(order_data, customers)
-            self.form_page.set_read_only(True) # Refresh button states
-
-            self.apply_filter()
+    def show_payment_dialog(self, current_payment):
+        dialog = PaymentDialog(self, current_payment)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            return dialog.get_payment_method()
+        return None
 
     def apply_filter(self):
-        """Hides collected orders if the pending_filter_checkbox is checked."""
         only_pending = self.pending_filter_checkbox.isChecked()
         for row in range(self.orders_table.rowCount()):
             item = self.orders_table.item(row, 4)
@@ -441,46 +390,3 @@ class OrdersTab(QWidget):
                 is_delivered = item.text() == "Yes"
                 should_hide = only_pending and is_delivered
                 self.orders_table.setRowHidden(row, should_hide)
-
-    def on_save(self):
-        """Saves order data and returns to table view."""
-        data = self.form_page.get_data()
-        
-        if self.current_edit_row == -1:
-            # Adding new
-            row = self.orders_table.rowCount()
-            self.orders_table.insertRow(row)
-            # Simple ID generation: row count or max ID + 1
-            order_id = str(row + 1)
-        else:
-            # Editing existing
-            row = self.current_edit_row
-            order_id = self.orders_table.item(row, 0).text()
-
-        data['id'] = order_id
-        id_item = QTableWidgetItem(order_id)
-        id_item.setData(Qt.ItemDataRole.UserRole, data)
-        self.orders_table.setItem(row, 0, id_item)
-        self.orders_table.setItem(row, 1, QTableWidgetItem(data['date']))
-        self.orders_table.setItem(row, 2, QTableWidgetItem(data['customer']))
-        self.orders_table.setItem(row, 3, QTableWidgetItem(data['payment']))
-        self.orders_table.setItem(row, 4, QTableWidgetItem(data['status']))
-        self.orders_table.setItem(row, 5, QTableWidgetItem(f"€ {data['total']:.2f}"))
-        
-        self.apply_filter()
-        self.stack.setCurrentWidget(self.table_page)
-
-    def on_cancel(self):
-        """Returns to table view without saving."""
-        self.stack.setCurrentWidget(self.table_page)
-
-    def get_orders(self):
-        """Returns all stored order data."""
-        orders = []
-        for row in range(self.orders_table.rowCount()):
-            id_item = self.orders_table.item(row, 0)
-            if id_item:
-                order_data = id_item.data(Qt.ItemDataRole.UserRole)
-                if order_data:
-                    orders.append(order_data)
-        return orders
