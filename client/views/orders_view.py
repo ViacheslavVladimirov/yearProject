@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView, QStackedWidget, QCheckBox
 )
 from PyQt6.QtCore import pyqtSignal
-from views.forms.order_form import OrderForm, PaymentDialog
+from client.views.forms.order_form import OrderForm, PaymentDialog
 
 class OrdersView(QWidget):
     add_requested = pyqtSignal()
