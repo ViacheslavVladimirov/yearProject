@@ -1,41 +1,47 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QMainWindow, QTabWidget
 
-from orders_tab import OrdersTab
-from products_tab import ProductsTab
-from customers_tab import CustomersTab
-from overview_tab import OverviewTab
+from views.orders_view import OrdersView
+from views.products_view import ProductsView
+from views.customers_view import CustomersView
+from views.overview_view import OverviewView
 
-from models import CustomerModel, ProductModel, OrderModel
-from controllers import CustomerController, ProductController, OrderController, OverviewController
+from models.customer import Customer
+from models.product import Product
+from models.order import Order
+
+from controllers.customer_controller import CustomerController
+from controllers.product_controller import ProductController
+from controllers.order_controller import OrderController
+from controllers.overview_controller import OverviewController
 
 class OrderEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # Set window title and geometry
-        self.setWindowTitle("Order Editor - MVC Version")
+        self.setWindowTitle("Order Editor - MVC Structural Refactor")
         self.setGeometry(100, 100, 1000, 700)
 
-        # Initialize Models
-        self.customer_model = CustomerModel()
-        self.product_model = ProductModel()
-        self.order_model = OrderModel()
+        # Initialize Models (Removing 'Model' suffix)
+        self.customer_data = Customer()
+        self.product_data = Product()
+        self.order_data = Order()
 
         # Initialize Views
-        self.orders_tab = OrdersTab()
-        self.products_tab = ProductsTab()
-        self.customers_tab = CustomersTab()
-        self.overview_tab = OverviewTab()
+        self.orders_tab = OrdersView()
+        self.products_tab = ProductsView()
+        self.customers_tab = CustomersView()
+        self.overview_tab = OverviewView()
 
         # Initialize Controllers
-        self.customer_controller = CustomerController(self.customer_model, self.customers_tab)
-        self.product_controller = ProductController(self.product_model, self.products_tab)
+        self.customer_controller = CustomerController(self.customer_data, self.customers_tab)
+        self.product_controller = ProductController(self.product_data, self.products_tab)
         self.order_controller = OrderController(
-            self.order_model, self.orders_tab, 
-            self.customer_model, self.product_model
+            self.order_data, self.orders_tab, 
+            self.customer_data, self.product_data
         )
-        self.overview_controller = OverviewController(self.order_model, self.overview_tab)
+        self.overview_controller = OverviewController(self.order_data, self.overview_tab)
 
         # Create a central widget and a layout
         central_widget = QWidget()

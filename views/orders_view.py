@@ -281,7 +281,7 @@ class PaymentDialog(QDialog):
     def get_payment_method(self):
         return self.payment_combo.currentText()
 
-class OrdersTab(QWidget):
+class OrdersView(QWidget):
     add_requested = pyqtSignal()
     view_requested = pyqtSignal(int)
     save_requested = pyqtSignal(dict)

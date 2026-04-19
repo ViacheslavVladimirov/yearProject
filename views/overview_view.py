@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QLabel, QFrame
 from PyQt6.QtCore import Qt
 
-class OverviewTab(QWidget):
+class OverviewView(QWidget):
     def __init__(self):
         super().__init__()
         self.setup_ui()

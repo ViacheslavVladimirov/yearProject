@@ -54,7 +54,7 @@ class CustomerForm(QWidget):
         self.email_input.clear()
         self.phone_input.clear()
 
-class CustomersTab(QWidget):
+class CustomersView(QWidget):
     add_requested = pyqtSignal()
     edit_requested = pyqtSignal(int)
     delete_requested = pyqtSignal(int)

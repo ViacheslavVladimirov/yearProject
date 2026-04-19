@@ -54,7 +54,7 @@ class ProductForm(QWidget):
         self.price_input.clear()
         self.stock_input.clear()
 
-class ProductsTab(QWidget):
+class ProductsView(QWidget):
     add_requested = pyqtSignal()
     edit_requested = pyqtSignal(int)
     delete_requested = pyqtSignal(int)
