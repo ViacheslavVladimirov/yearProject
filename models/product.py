@@ -1,12 +1,6 @@
 class Product:
     def __init__(self):
-        self._products = [
-            {"name": "Laptop", "price": "999.99", "stock": "15"},
-            {"name": "Mouse", "price": "25.50", "stock": "120"},
-            {"name": "Keyboard", "price": "45.00", "stock": "50"},
-            {"name": "Monitor", "price": "199.99", "stock": "30"},
-            {"name": "USB Cable", "price": "9.99", "stock": "200"}
-        ]
+        self._products = []
         self.on_data_changed = []
 
     def notify(self):

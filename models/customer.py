@@ -1,10 +1,6 @@
 class Customer:
     def __init__(self):
-        self._customers = [
-            {"name": "John Doe", "email": "john@example.com", "phone": "555-0101"},
-            {"name": "Jane Smith", "email": "jane@example.com", "phone": "555-0102"},
-            {"name": "Acme Corp", "email": "contact@acme.com", "phone": "555-0999"}
-        ]
+        self._customers = []
         self.on_data_changed = []
 
     def notify(self):
