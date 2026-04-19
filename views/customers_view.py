@@ -108,9 +108,9 @@ class CustomersView(QWidget):
     def display_customers(self, customers):
         self.customers_table.setRowCount(len(customers))
         for row, customer in enumerate(customers):
-            self.customers_table.setItem(row, 0, QTableWidgetItem(customer['name']))
-            self.customers_table.setItem(row, 1, QTableWidgetItem(customer['email']))
-            self.customers_table.setItem(row, 2, QTableWidgetItem(customer['phone']))
+            self.customers_table.setItem(row, 0, QTableWidgetItem(str(customer.get('name', ''))))
+            self.customers_table.setItem(row, 1, QTableWidgetItem(str(customer.get('email', ''))))
+            self.customers_table.setItem(row, 2, QTableWidgetItem(str(customer.get('phone', ''))))
         self.filter_customers(self.search_input.text())
 
     def show_form(self, customer_data=None):

@@ -15,9 +15,14 @@ from controllers.product_controller import ProductController
 from controllers.order_controller import OrderController
 from controllers.overview_controller import OverviewController
 
+from controllers.db_utils import init_db
+
 class OrderEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        
+        # Initialize database
+        init_db()
 
         # Set window title and geometry
         self.setWindowTitle("Order Editor - MVC Structural Refactor")

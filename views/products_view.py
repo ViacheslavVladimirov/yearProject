@@ -106,9 +106,9 @@ class ProductsView(QWidget):
     def display_products(self, products):
         self.products_table.setRowCount(len(products))
         for row, product in enumerate(products):
-            self.products_table.setItem(row, 0, QTableWidgetItem(product['name']))
-            self.products_table.setItem(row, 1, QTableWidgetItem(product['price']))
-            self.products_table.setItem(row, 2, QTableWidgetItem(product['stock']))
+            self.products_table.setItem(row, 0, QTableWidgetItem(str(product['name'])))
+            self.products_table.setItem(row, 1, QTableWidgetItem(str(product['price'])))
+            self.products_table.setItem(row, 2, QTableWidgetItem(str(product['stock'])))
         self.filter_products(self.search_input.text())
 
     def show_form(self, product_data=None):

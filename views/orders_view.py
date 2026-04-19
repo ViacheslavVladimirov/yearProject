@@ -79,13 +79,13 @@ class OrdersView(QWidget):
     def display_orders(self, orders):
         self.orders_table.setRowCount(len(orders))
         for row, order in enumerate(orders):
-            self.orders_table.setItem(row, 0, QTableWidgetItem(order.get('id', '')))
-            self.orders_table.setItem(row, 1, QTableWidgetItem(order.get('date', '')))
-            self.orders_table.setItem(row, 2, QTableWidgetItem(order.get('customer', '')))
-            self.orders_table.setItem(row, 3, QTableWidgetItem(order.get('payment', '')))
-            self.orders_table.setItem(row, 4, QTableWidgetItem(order.get('status', '')))
+            self.orders_table.setItem(row, 0, QTableWidgetItem(str(order.get('id', ''))))
+            self.orders_table.setItem(row, 1, QTableWidgetItem(str(order.get('date', ''))))
+            self.orders_table.setItem(row, 2, QTableWidgetItem(str(order.get('customer', ''))))
+            self.orders_table.setItem(row, 3, QTableWidgetItem(str(order.get('payment', ''))))
+            self.orders_table.setItem(row, 4, QTableWidgetItem(str(order.get('status', ''))))
             total = order.get('total', 0.0)
-            self.orders_table.setItem(row, 5, QTableWidgetItem(f"€ {total:.2f}"))
+            self.orders_table.setItem(row, 5, QTableWidgetItem(f"€ {float(total):.2f}"))
         self.apply_filter()
 
     def show_form(self, order_data, customers, products):

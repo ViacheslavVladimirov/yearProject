@@ -1,6 +1,7 @@
+from controllers.db_utils import get_connection
+
 class Customer:
     def __init__(self):
-        self._customers = []
         self.on_data_changed = []
 
     def notify(self):
@@ -8,18 +9,52 @@ class Customer:
             callback()
 
     def get_all(self):
-        return self._customers
+        customers = []
+        conn = get_connection()
+        if conn:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM customers")
+            customers = cursor.fetchall()
+            conn.close()
+        return customers
 
     def add(self, customer):
-        self._customers.append(customer)
-        self.notify()
+        conn = get_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO customers (name, email, phone) VALUES (%s, %s, %s)",
+                (customer['name'], customer['email'], customer['phone'])
+            )
+            conn.commit()
+            conn.close()
+            self.notify()
 
     def update(self, index, customer):
-        if 0 <= index < len(self._customers):
-            self._customers[index] = customer
-            self.notify()
+        # In a database-backed model, it's better to update by ID.
+        # However, to maintain compatibility with index-based controller:
+        all_customers = self.get_all()
+        if 0 <= index < len(all_customers):
+            customer_id = all_customers[index]['id']
+            conn = get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE customers SET name=%s, email=%s, phone=%s WHERE id=%s",
+                    (customer['name'], customer['email'], customer['phone'], customer_id)
+                )
+                conn.commit()
+                conn.close()
+                self.notify()
 
     def delete(self, index):
-        if 0 <= index < len(self._customers):
-            self._customers.pop(index)
-            self.notify()
+        all_customers = self.get_all()
+        if 0 <= index < len(all_customers):
+            customer_id = all_customers[index]['id']
+            conn = get_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM customers WHERE id=%s", (customer_id,))
+                conn.commit()
+                conn.close()
+                self.notify()

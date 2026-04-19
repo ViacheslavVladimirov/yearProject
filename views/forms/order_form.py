@@ -157,9 +157,9 @@ class OrderForm(QWidget):
             data = dialog.get_data()
             row = self.items_table.rowCount()
             self.items_table.insertRow(row)
-            self.items_table.setItem(row, 0, QTableWidgetItem(data['name']))
-            self.items_table.setItem(row, 1, QTableWidgetItem(data['price']))
-            self.items_table.setItem(row, 2, QTableWidgetItem(data['amount']))
+            self.items_table.setItem(row, 0, QTableWidgetItem(str(data['name'])))
+            self.items_table.setItem(row, 1, QTableWidgetItem(str(data['price'])))
+            self.items_table.setItem(row, 2, QTableWidgetItem(str(data['amount'])))
             self.calculate_total()
 
     def remove_item(self):
@@ -212,9 +212,9 @@ class OrderForm(QWidget):
             items = order_data.get('items', [])
             for row, item in enumerate(items):
                 self.items_table.insertRow(row)
-                self.items_table.setItem(row, 0, QTableWidgetItem(item['name']))
-                self.items_table.setItem(row, 1, QTableWidgetItem(item['price']))
-                self.items_table.setItem(row, 2, QTableWidgetItem(item['amount']))
+                self.items_table.setItem(row, 0, QTableWidgetItem(str(item.get('name', ''))))
+                self.items_table.setItem(row, 1, QTableWidgetItem(str(item.get('price', ''))))
+                self.items_table.setItem(row, 2, QTableWidgetItem(str(item.get('amount', ''))))
             
             self.calculate_total()
             self.update_status_options()
