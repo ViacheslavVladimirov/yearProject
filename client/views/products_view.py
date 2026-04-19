@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView, QStackedWidget, 
     QLineEdit, QLabel
 )
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from views.forms.product_form import ProductForm
 
 class ProductsView(QWidget):

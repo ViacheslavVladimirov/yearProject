@@ -26,12 +26,17 @@ def send_command(command):
         client.close()
         
         if response.startswith("OK"):
-            if len(response) > 3:
-                try:
-                    return json.loads(response[3:])
-                except json.JSONDecodeError as e:
-                    print(f"JSON error: {e}")
-                    return response[3:]
+            body = response[3:].strip()
+            # Handle non-JSON success messages like "Created" or "Updated"
+            if body in ["Created", "Updated", "Deleted"]:
+                return True
+            if not body:
+                return True
+            try:
+                return json.loads(body)
+            except json.JSONDecodeError as e:
+                print(f"JSON error: {e}, body: '{body}'")
+                return body
             return True
         else:
             print(f"Server error: {response}")

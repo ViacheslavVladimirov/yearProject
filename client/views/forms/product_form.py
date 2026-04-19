@@ -32,9 +32,14 @@ class ProductForm(QWidget):
         layout.addRow(button_layout)
 
     def set_data(self, product_data):
-        self.name_input.setText(product_data.get('name', ''))
-        self.price_input.setText(product_data.get('price', ''))
-        self.stock_input.setText(product_data.get('stock', ''))
+        self.name_input.setText(str(product_data.get('name', '')))
+
+        price = product_data.get('price')
+        self.price_input.setText(str(price) if price is not None else "")
+
+        stock = product_data.get('stock')
+        self.stock_input.setText(str(stock) if stock is not None else "")
+
 
     def get_data(self):
         return {

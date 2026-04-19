@@ -33,9 +33,9 @@ class CustomerForm(QWidget):
         layout.addRow(button_layout)
 
     def set_data(self, customer_data):
-        self.name_input.setText(customer_data.get('name', ''))
-        self.email_input.setText(customer_data.get('email', ''))
-        self.phone_input.setText(customer_data.get('phone', ''))
+        self.name_input.setText(str(customer_data.get('name', '')))
+        self.email_input.setText(str(customer_data.get('email', '')))
+        self.phone_input.setText(str(customer_data.get('phone', '')))
 
     def get_data(self):
         return {
