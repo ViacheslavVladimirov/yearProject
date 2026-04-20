@@ -144,6 +144,7 @@ def handle_client(client_socket):
         data = recv_all(client_socket)
         if not data:
             return
+        print(f"Received request: {data}")
         parts = data.split(' ', 1)
         command = parts[0]
         response = "ERROR Invalid command"
@@ -165,9 +166,14 @@ def handle_client(client_socket):
             del_parts = parts[1].split(' ', 1)
             response = handle_delete(del_parts[0], del_parts[1])
         
+        if response.startswith("OK"):
+            print("Sending response: OK")
+        else:
+            print(f"Sending response: {response}")
         client_socket.send(response.encode('utf-8'))
     except Exception as e:
-        print(f"Error handling client: {e}")
+        print(f"request handling error: {e}")
+        print(f"Sending response: ERROR {str(e)}")
         client_socket.send(f"ERROR {str(e)}".encode('utf-8'))
     finally:
         client_socket.close()
