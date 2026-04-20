@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QHeaderView, 
     QAbstractItemView, QFormLayout, QComboBox, 
-    QDateEdit, QDialog, QLineEdit, QLabel, QCompleter
+    QDateEdit, QDialog, QLineEdit, QLabel, QCompleter, QCheckBox
 )
 from PyQt6.QtCore import Qt, QDate, pyqtSignal
 
@@ -79,15 +79,14 @@ class OrderForm(QWidget):
         self.customer_combo.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.payment_combo = QComboBox()
         self.payment_combo.addItems(["None", "Cash", "Payconic", "Split"])
-        self.status_combo = QComboBox()
-        self.status_combo.addItems(["No", "Yes"])
+        self.delivered_checkbox = QCheckBox("Delivered")
 
-        self.payment_combo.currentIndexChanged.connect(self.update_status_options)
+        self.payment_combo.currentIndexChanged.connect(self.update_delivered_status)
 
         form_layout.addRow("Date:", self.date_input)
         form_layout.addRow("Customer:", self.customer_combo)
         form_layout.addRow("Payment Method:", self.payment_combo)
-        form_layout.addRow("Delivered:", self.status_combo)
+        form_layout.addRow(self.delivered_checkbox)
         
         self.total_price_label = QLabel("€ 0.00")
         self.total_price_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #2c3e50;")
@@ -138,7 +137,7 @@ class OrderForm(QWidget):
         self.date_input.setReadOnly(read_only)
         self.customer_combo.setEnabled(not read_only)
         self.payment_combo.setEnabled(not read_only)
-        self.status_combo.setEnabled(not read_only)
+        self.delivered_checkbox.setEnabled(not read_only and self.payment_combo.currentText() != "None")
         self.items_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers if read_only else QAbstractItemView.EditTrigger.DoubleClicked)
         
         self.item_btn_container.setVisible(not read_only)
@@ -148,7 +147,7 @@ class OrderForm(QWidget):
         self.collect_btn.setVisible(read_only)
         
         if read_only:
-            is_delivered = self.status_combo.currentText() == "Yes"
+            is_delivered = self.delivered_checkbox.isChecked()
             self.collect_btn.setEnabled(not is_delivered)
 
     def on_add_item(self):
@@ -180,11 +179,11 @@ class OrderForm(QWidget):
         self.total_price_label.setText(f"€ {total:.2f}")
         return total
 
-    def update_status_options(self):
+    def update_delivered_status(self):
         is_paid = self.payment_combo.currentText() != "None"
+        self.delivered_checkbox.setEnabled(is_paid)
         if not is_paid:
-            self.status_combo.setCurrentIndex(0)
-        self.status_combo.view().setRowHidden(1, not is_paid)
+            self.delivered_checkbox.setChecked(False)
 
     def set_data(self, order_data, customers, products):
         self.customer_combo.clear()
@@ -205,9 +204,7 @@ class OrderForm(QWidget):
             if p_index >= 0:
                 self.payment_combo.setCurrentIndex(p_index)
             
-            s_index = self.status_combo.findText(order_data.get('status', ''))
-            if s_index >= 0:
-                self.status_combo.setCurrentIndex(s_index)
+            self.delivered_checkbox.setChecked(bool(order_data.get('is_delivered', False)))
 
             items = order_data.get('items', [])
             for row, item in enumerate(items):
@@ -217,12 +214,12 @@ class OrderForm(QWidget):
                 self.items_table.setItem(row, 2, QTableWidgetItem(str(item.get('amount', ''))))
             
             self.calculate_total()
-            self.update_status_options()
+            self.update_delivered_status()
         else:
             self.date_input.setDate(QDate.currentDate())
             self.payment_combo.setCurrentIndex(0)
             self.calculate_total()
-            self.update_status_options()
+            self.update_delivered_status()
 
     def get_data(self):
         items = []
@@ -236,7 +233,7 @@ class OrderForm(QWidget):
             'date': self.date_input.date().toString(Qt.DateFormat.ISODate),
             'customer': self.customer_combo.currentText(),
             'payment': self.payment_combo.currentText(),
-            'status': self.status_combo.currentText(),
+            'is_delivered': self.delivered_checkbox.isChecked(),
             'total': self.calculate_total(),
             'items': items
         }

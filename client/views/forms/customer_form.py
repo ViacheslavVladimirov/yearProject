@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QLineEdit, QHBoxLayout, QPushButton, QFormLayout
+from PyQt6.QtWidgets import QWidget, QLineEdit, QHBoxLayout, QPushButton, QFormLayout, QMessageBox
 from PyQt6.QtCore import pyqtSignal
 
 class CustomerForm(QWidget):
@@ -12,8 +12,11 @@ class CustomerForm(QWidget):
         layout = QFormLayout(self)
 
         self.name_input = QLineEdit()
+        self.name_input.setMaxLength(255)
         self.email_input = QLineEdit()
+        self.email_input.setMaxLength(255)
         self.phone_input = QLineEdit()
+        self.phone_input.setMaxLength(50)
 
         layout.addRow("Customer Name:", self.name_input)
         layout.addRow("Email:", self.email_input)
@@ -24,13 +27,24 @@ class CustomerForm(QWidget):
         self.save_btn = QPushButton("Save")
         self.cancel_btn = QPushButton("Cancel")
         
-        self.save_btn.clicked.connect(self.on_save_callback)
+        self.save_btn.clicked.connect(self.validate_and_save)
         self.cancel_btn.clicked.connect(self.on_cancel_callback)
         
         button_layout.addWidget(self.save_btn)
         button_layout.addWidget(self.cancel_btn)
         
         layout.addRow(button_layout)
+
+    def validate_and_save(self):
+        name = self.name_input.text().strip()
+        email = self.email_input.text().strip()
+        phone = self.phone_input.text().strip()
+
+        if not name or not email or not phone:
+            QMessageBox.warning(self, "Validation Error", "All fields are required.")
+            return
+
+        self.on_save_callback()
 
     def set_data(self, customer_data):
         self.name_input.setText(str(customer_data.get('name', '')))
@@ -39,9 +53,9 @@ class CustomerForm(QWidget):
 
     def get_data(self):
         return {
-            'name': self.name_input.text(),
-            'email': self.email_input.text(),
-            'phone': self.phone_input.text()
+            'name': self.name_input.text().strip(),
+            'email': self.email_input.text().strip(),
+            'phone': self.phone_input.text().strip()
         }
 
     def clear(self):

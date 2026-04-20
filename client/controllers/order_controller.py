@@ -30,7 +30,7 @@ class OrderController:
             data['date'] = str(ro.get('order_date', ''))
             data['customer'] = ro.get('customer_name', '')
             data['payment'] = ro.get('payment_method', '')
-            data['status'] = ro.get('status', '')
+            data['is_delivered'] = bool(ro.get('is_delivered', False))
             data['total'] = float(ro.get('total_price', 0.0))
             
             # Map item keys for UI
@@ -83,7 +83,7 @@ class OrderController:
             'date': data['date'],
             'customer': data['customer'],
             'payment': data['payment'],
-            'status': data['status'],
+            'is_delivered': data['is_delivered'],
             'total': data['total'],
             'items': items
         }
@@ -117,7 +117,7 @@ class OrderController:
                         return
 
                 order_data['payment'] = current_payment
-                order_data['status'] = "Yes"
+                order_data['is_delivered'] = True
                 
                 # Payload for server update, remapping items
                 items = []
@@ -132,7 +132,7 @@ class OrderController:
                     'date': order_data['date'],
                     'customer': order_data['customer'],
                     'payment': order_data['payment'],
-                    'status': order_data['status'],
+                    'is_delivered': order_data['is_delivered'],
                     'total': order_data['total'],
                     'items': items
                 }

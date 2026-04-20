@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QLineEdit, QHBoxLayout, QPushButton, QFormLayout
+from PyQt6.QtWidgets import QWidget, QLineEdit, QHBoxLayout, QPushButton, QFormLayout, QMessageBox
 
 class ProductForm(QWidget):
     def __init__(self, on_save, on_cancel):
@@ -11,6 +11,7 @@ class ProductForm(QWidget):
         layout = QFormLayout(self)
 
         self.name_input = QLineEdit()
+        self.name_input.setMaxLength(255)
         self.price_input = QLineEdit()
         self.stock_input = QLineEdit()
 
@@ -23,13 +24,36 @@ class ProductForm(QWidget):
         self.save_btn = QPushButton("Save")
         self.cancel_btn = QPushButton("Cancel")
         
-        self.save_btn.clicked.connect(self.on_save_callback)
+        self.save_btn.clicked.connect(self.validate_and_save)
         self.cancel_btn.clicked.connect(self.on_cancel_callback)
         
         button_layout.addWidget(self.save_btn)
         button_layout.addWidget(self.cancel_btn)
         
         layout.addRow(button_layout)
+
+    def validate_and_save(self):
+        name = self.name_input.text().strip()
+        price_str = self.price_input.text().strip()
+        stock_str = self.stock_input.text().strip()
+
+        if not name or not price_str or not stock_str:
+            QMessageBox.warning(self, "Validation Error", "All fields are required.")
+            return
+
+        try:
+            price = float(price_str)
+        except ValueError:
+            QMessageBox.warning(self, "Validation Error", "Price must be a valid number (int or float).")
+            return
+
+        try:
+            stock = int(stock_str)
+        except ValueError:
+            QMessageBox.warning(self, "Validation Error", "Stock must be a valid integer.")
+            return
+
+        self.on_save_callback()
 
     def set_data(self, product_data):
         self.name_input.setText(str(product_data.get('name', '')))
@@ -43,9 +67,9 @@ class ProductForm(QWidget):
 
     def get_data(self):
         return {
-            'name': self.name_input.text(),
-            'price': self.price_input.text(),
-            'stock': self.stock_input.text()
+            'name': self.name_input.text().strip(),
+            'price': float(self.price_input.text().strip()),
+            'stock': int(self.stock_input.text().strip())
         }
 
     def clear(self):

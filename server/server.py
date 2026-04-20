@@ -60,7 +60,7 @@ def handle_create(entity, data_str):
     elif entity == "CUSTOMER":
         cursor.execute("INSERT INTO customers (name, email, phone) VALUES (%s, %s, %s)", (payload['name'], payload['email'], payload['phone']))
     elif entity == "ORDER":
-        cursor.execute("INSERT INTO orders (order_date, customer_name, payment_method, status, total_price) VALUES (%s, %s, %s, %s, %s)", (payload['date'], payload['customer'], payload['payment'], payload['status'], payload['total']))
+        cursor.execute("INSERT INTO orders (order_date, customer_name, payment_method, is_delivered, total_price) VALUES (%s, %s, %s, %s, %s)", (payload['date'], payload['customer'], payload['payment'], payload['is_delivered'], payload['total']))
         order_id = cursor.lastrowid
         for item in payload.get('items', []):
             cursor.execute("INSERT INTO order_items (order_id, product_name, price, amount) VALUES (%s, %s, %s, %s)", (order_id, item['product_name'], item['price'], item['amount']))
@@ -115,7 +115,7 @@ def handle_update(entity, entity_id, data_str):
     elif entity == "CUSTOMER":
         cursor.execute("UPDATE customers SET name=%s, email=%s, phone=%s WHERE id=%s", (payload['name'], payload['email'], payload['phone'], entity_id))
     elif entity == "ORDER":
-        cursor.execute("UPDATE orders SET order_date=%s, customer_name=%s, payment_method=%s, status=%s, total_price=%s WHERE id=%s", (payload['date'], payload['customer'], payload['payment'], payload['status'], payload['total'], entity_id))
+        cursor.execute("UPDATE orders SET order_date=%s, customer_name=%s, payment_method=%s, is_delivered=%s, total_price=%s WHERE id=%s", (payload['date'], payload['customer'], payload['payment'], payload['is_delivered'], payload['total'], entity_id))
         if 'items' in payload:
             cursor.execute("DELETE FROM order_items WHERE order_id = %s", (entity_id,))
             for item in payload['items']:

@@ -60,7 +60,7 @@ def init_db():
                 order_date DATE,
                 customer_name VARCHAR(255),
                 payment_method VARCHAR(50),
-                status VARCHAR(50),
+                is_delivered BOOLEAN DEFAULT FALSE,
                 total_price DECIMAL(10, 2)
             )
         """)

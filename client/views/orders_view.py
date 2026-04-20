@@ -83,7 +83,8 @@ class OrdersView(QWidget):
             self.orders_table.setItem(row, 1, QTableWidgetItem(str(order.get('date', ''))))
             self.orders_table.setItem(row, 2, QTableWidgetItem(str(order.get('customer', ''))))
             self.orders_table.setItem(row, 3, QTableWidgetItem(str(order.get('payment', ''))))
-            self.orders_table.setItem(row, 4, QTableWidgetItem(str(order.get('status', ''))))
+            delivered_text = "Yes" if order.get('is_delivered') else "No"
+            self.orders_table.setItem(row, 4, QTableWidgetItem(delivered_text))
             total = order.get('total', 0.0)
             self.orders_table.setItem(row, 5, QTableWidgetItem(f"€ {float(total):.2f}"))
         self.apply_filter()
