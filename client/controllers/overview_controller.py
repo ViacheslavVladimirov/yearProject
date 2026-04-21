@@ -3,10 +3,14 @@ from .db_utils import get_stats
 class OverviewController:
     def __init__(self, view):
         self.view = view
+        self.view.filter_button.clicked.connect(self.update_view)
         self.update_view()
 
     def update_view(self):
-        stats = get_stats()
+        start_date = self.view.start_date_edit.date().toString("yyyy-MM-dd")
+        end_date = self.view.end_date_edit.date().toString("yyyy-MM-dd")
+        
+        stats = get_stats(start_date, end_date)
         if stats:
             total_products = stats.get('total_products', 0)
             total_revenue = stats.get('total_revenue', 0.0)

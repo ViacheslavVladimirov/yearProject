@@ -17,6 +17,11 @@ class OrderItemDialog(QDialog):
         layout = QFormLayout(self)
 
         self.product_combo = QComboBox()
+        self.product_combo.setEditable(True)
+        self.product_combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.product_combo.completer().setFilterMode(Qt.MatchFlag.MatchContains)
+        self.product_combo.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
+        
         for p in self.products:
             self.product_combo.addItem(p['name'], p['price'])
 
@@ -31,6 +36,7 @@ class OrderItemDialog(QDialog):
         layout.addRow("Amount:", self.amount_input)
 
         self.product_combo.currentIndexChanged.connect(self.update_price)
+        self.product_combo.currentTextChanged.connect(self.update_price)
         self.update_price()
 
         button_layout = QHBoxLayout()

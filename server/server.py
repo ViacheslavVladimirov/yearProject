@@ -74,7 +74,18 @@ def handle_get(entity, entity_id=None):
         return "ERROR DB connection failed"
     cursor = conn.cursor(dictionary=True)
     if entity == "STATS":
-        cursor.execute("SELECT amount, price FROM order_items")
+        query = "SELECT order_items.amount, order_items.price FROM order_items"
+        params = []
+        if entity_id:
+            try:
+                filters = json.loads(entity_id)
+                if 'start_date' in filters and 'end_date' in filters:
+                    query += " JOIN orders ON order_items.order_id = orders.id WHERE orders.order_date BETWEEN %s AND %s"
+                    params = [filters['start_date'], filters['end_date']]
+            except json.JSONDecodeError:
+                pass
+        
+        cursor.execute(query, params)
         items = cursor.fetchall()
         total_products, total_revenue = 0, 0.0
         for item in items:

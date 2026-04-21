@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QLabel, QFrame
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QLabel, QFrame, QHBoxLayout, QDateEdit, QPushButton
+from PyQt6.QtCore import Qt, QDate
 
 class OverviewView(QWidget):
     def __init__(self):
@@ -12,6 +12,26 @@ class OverviewView(QWidget):
         title = QLabel("Business Overview")
         title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
         layout.addWidget(title)
+
+        # Date Filter
+        filter_layout = QHBoxLayout()
+        filter_layout.addWidget(QLabel("Start Date:"))
+        self.start_date_edit = QDateEdit()
+        self.start_date_edit.setCalendarPopup(True)
+        self.start_date_edit.setDate(QDate.currentDate())
+        filter_layout.addWidget(self.start_date_edit)
+
+        filter_layout.addWidget(QLabel("End Date:"))
+        self.end_date_edit = QDateEdit()
+        self.end_date_edit.setCalendarPopup(True)
+        self.end_date_edit.setDate(QDate.currentDate())
+        filter_layout.addWidget(self.end_date_edit)
+
+        self.filter_button = QPushButton("Filter")
+        filter_layout.addWidget(self.filter_button)
+        
+        filter_layout.addStretch()
+        layout.addLayout(filter_layout)
 
         grid = QGridLayout()
         

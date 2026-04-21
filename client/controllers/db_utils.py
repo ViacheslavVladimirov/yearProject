@@ -82,5 +82,8 @@ def update_order(order_id, data):
 def delete_order(order_id):
     return send_command(f"DELETE ORDER {order_id}")
 
-def get_stats():
+def get_stats(start_date=None, end_date=None):
+    if start_date and end_date:
+        filters = json.dumps({"start_date": start_date, "end_date": end_date})
+        return send_command(f"GET STATS {filters}")
     return send_command("GET STATS")
