@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMessageBox
-from .db_utils import get_all_products, create_product, update_product, delete_product
+from .apiClient import get_all_products, create_product, update_product, delete_product
 from models.product import Product
 
 class ProductController:

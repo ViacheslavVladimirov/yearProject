@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QMessageBox
-from .db_utils import get_all_customers, create_customer, update_customer, delete_customer
+from .apiClient import get_all_customers, create_customer, update_customer, delete_customer
 from models.customer import Customer
 
 class CustomerController:

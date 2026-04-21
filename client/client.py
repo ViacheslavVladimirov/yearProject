@@ -6,10 +6,10 @@ from views.products_view import ProductsView
 from views.customers_view import CustomersView
 from views.overview_view import OverviewView
 
-from controllers.customer_controller import CustomerController
-from controllers.product_controller import ProductController
-from controllers.order_controller import OrderController
-from controllers.overview_controller import OverviewController
+from controllers.customerController import CustomerController
+from controllers.productController import ProductController
+from controllers.orderController import OrderController
+from controllers.overviewController import OverviewController
 
 class OrderEditorWindow(QMainWindow):
     def __init__(self):

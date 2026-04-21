@@ -1,4 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QLineEdit, QHBoxLayout, QPushButton, QFormLayout, QMessageBox
+from PyQt6.QtGui import QDoubleValidator, QIntValidator
 
 class ProductForm(QWidget):
     def __init__(self, on_save, on_cancel):
@@ -12,8 +13,12 @@ class ProductForm(QWidget):
 
         self.name_input = QLineEdit()
         self.name_input.setMaxLength(255)
+        
         self.price_input = QLineEdit()
+        self.price_input.setValidator(QDoubleValidator(0.0, 999999.99, 2))
+        
         self.stock_input = QLineEdit()
+        self.stock_input.setValidator(QIntValidator(0, 999999))
 
         layout.addRow("Name:", self.name_input)
         layout.addRow("Price:", self.price_input)

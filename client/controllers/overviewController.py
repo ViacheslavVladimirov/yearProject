@@ -1,4 +1,4 @@
-from .db_utils import get_stats
+from .apiClient import get_stats
 
 class OverviewController:
     def __init__(self, view):

@@ -1,4 +1,4 @@
-from .db_utils import get_all_orders, create_order, update_order, get_all_customers, get_all_products
+from .apiClient import get_all_orders, create_order, update_order, get_all_customers, get_all_products
 from models.order import Order
 from models.customer import Customer
 from models.product import Product

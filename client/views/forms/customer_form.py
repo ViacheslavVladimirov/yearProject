@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QLineEdit, QHBoxLayout, QPushButton, QFormLayout, QMessageBox
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QRegularExpression
+from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 
 class CustomerForm(QWidget):
     def __init__(self, on_save, on_cancel):
@@ -13,10 +14,15 @@ class CustomerForm(QWidget):
 
         self.name_input = QLineEdit()
         self.name_input.setMaxLength(255)
+        
         self.email_input = QLineEdit()
         self.email_input.setMaxLength(255)
+        email_regex = QRegularExpression(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        self.email_input.setValidator(QRegularExpressionValidator(email_regex))
+        
         self.phone_input = QLineEdit()
         self.phone_input.setMaxLength(50)
+        self.phone_input.setValidator(QIntValidator())
 
         layout.addRow("Customer Name:", self.name_input)
         layout.addRow("Email:", self.email_input)

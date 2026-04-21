@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QDateEdit, QDialog, QLineEdit, QLabel, QCompleter, QCheckBox
 )
 from PyQt6.QtCore import Qt, QDate, pyqtSignal
+from PyQt6.QtGui import QIntValidator
 
 class OrderItemDialog(QDialog):
     def __init__(self, parent=None, products=None):
@@ -30,6 +31,7 @@ class OrderItemDialog(QDialog):
         
         self.amount_input = QLineEdit()
         self.amount_input.setText("1")
+        self.amount_input.setValidator(QIntValidator(1, 9999))
 
         layout.addRow("Product:", self.product_combo)
         layout.addRow("Price:", self.price_input)
