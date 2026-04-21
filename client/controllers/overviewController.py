@@ -4,7 +4,6 @@ class OverviewController:
     def __init__(self, view):
         self.view = view
         self.view.filter_button.clicked.connect(self.update_view)
-        self.update_view()
 
     def update_view(self):
         start_date = self.view.start_date_edit.date().toString("yyyy-MM-dd")

@@ -13,9 +13,6 @@ class CustomerController:
         self.view.save_requested.connect(self.on_save_requested)
         self.view.cancel_requested.connect(self.on_cancel_requested)
 
-        # Initial view update
-        self.update_view()
-
     def update_view(self):
         raw_customers = get_all_customers() or []
         customers = [Customer.deserialize(c).serialize() for c in raw_customers]

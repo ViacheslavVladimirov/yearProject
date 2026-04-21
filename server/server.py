@@ -160,7 +160,9 @@ def handle_client(client_socket):
         command = parts[0]
         response = "ERROR Invalid command"
         
-        if command == "LIST" and len(parts) > 1:
+        if command == "PING":
+            response = "OK PONG"
+        elif command == "LIST" and len(parts) > 1:
             response = handle_list(parts[1])
         elif command == "CREATE" and len(parts) > 1:
             create_parts = parts[1].split(' ', 1)

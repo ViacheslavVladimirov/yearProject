@@ -13,9 +13,6 @@ class ProductController:
         self.view.save_requested.connect(self.on_save_requested)
         self.view.cancel_requested.connect(self.on_cancel_requested)
 
-        # Initial view update
-        self.update_view()
-
     def update_view(self):
         raw_products = get_all_products() or []
         products = [Product.deserialize(p).serialize() for p in raw_products]

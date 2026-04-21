@@ -16,6 +16,7 @@ def recv_all(sock):
 def send_command(command):
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.settimeout(1.0) # 1 second timeout
         client.connect((SERVER_HOST, SERVER_PORT))
         client.send(command.encode('utf-8'))
         
@@ -87,3 +88,16 @@ def get_stats(start_date=None, end_date=None):
         filters = json.dumps({"start_date": start_date, "end_date": end_date})
         return send_command(f"GET STATS {filters}")
     return send_command("GET STATS")
+
+def ping():
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.settimeout(0.2) # Very short timeout for ping
+        client.connect((SERVER_HOST, SERVER_PORT))
+        client.send("PING".encode('utf-8'))
+        client.shutdown(socket.SHUT_WR)
+        response = recv_all(client)
+        client.close()
+        return response == "OK PONG"
+    except:
+        return False

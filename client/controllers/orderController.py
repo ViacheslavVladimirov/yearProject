@@ -17,8 +17,6 @@ class OrderController:
         self.view.cancel_requested.connect(self.on_cancel_requested)
         self.view.collect_requested.connect(self.on_collect_requested)
 
-        self.update_view()
-
     def get_orders_processed(self):
         raw_orders = get_all_orders() or []
         orders = []
