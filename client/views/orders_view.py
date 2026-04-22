@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QHeaderView, 
-    QAbstractItemView, QStackedWidget, QCheckBox, QDialog
+    QAbstractItemView, QStackedWidget, QCheckBox, QDialog,
+    QLineEdit, QLabel
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 from views.forms.order_form import OrderForm, PaymentDialog
@@ -27,6 +28,15 @@ class OrdersView(QWidget):
         # Page 1: Table View
         self.table_page = QWidget()
         table_layout = QVBoxLayout(self.table_page)
+
+        # Search Bar
+        search_layout = QHBoxLayout()
+        search_layout.addWidget(QLabel("Search:"))
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search by ID, Customer, etc...")
+        self.search_input.textChanged.connect(self.apply_filter)
+        search_layout.addWidget(self.search_input)
+        table_layout.addLayout(search_layout)
 
         self.pending_filter_checkbox = QCheckBox("Only pending orders")
         self.pending_filter_checkbox.stateChanged.connect(self.apply_filter)
@@ -123,9 +133,24 @@ class OrdersView(QWidget):
 
     def apply_filter(self):
         only_pending = self.pending_filter_checkbox.isChecked()
+        search_text = self.search_input.text().lower()
+        
         for row in range(self.orders_table.rowCount()):
-            item = self.orders_table.item(row, 4)
-            if item:
-                is_delivered = item.text() == "Yes"
-                should_hide = only_pending and is_delivered
-                self.orders_table.setRowHidden(row, should_hide)
+            # 1. Check Pending Filter
+            delivered_item = self.orders_table.item(row, 4)
+            is_delivered = delivered_item.text() == "Yes" if delivered_item else False
+            hide_by_pending = only_pending and is_delivered
+            
+            # 2. Check Search Text
+            match_search = False
+            if not search_text:
+                match_search = True
+            else:
+                for col in range(self.orders_table.columnCount()):
+                    item = self.orders_table.item(row, col)
+                    if item and search_text in item.text().lower():
+                        match_search = True
+                        break
+            
+            should_hide = hide_by_pending or not match_search
+            self.orders_table.setRowHidden(row, should_hide)
