@@ -5,6 +5,7 @@ from models.customer import Customer
 class CustomerController:
     def __init__(self, view):
         self.view = view
+        self.status_callback = lambda m, e=False: None
 
         # Connect view signals to controller actions
         self.view.add_requested.connect(self.on_add_requested)
@@ -40,19 +41,31 @@ class CustomerController:
             raw_customers = get_all_customers()
             if raw_customers and 0 <= index < len(raw_customers):
                 customer_id = raw_customers[index]['id']
-                delete_customer(customer_id)
+                success = delete_customer(customer_id)
+                if success:
+                    self.status_callback("Customer deleted successfully")
+                else:
+                    self.status_callback("Failed to delete customer", True)
                 self.update_view()
 
     def on_save_requested(self, data):
         customer = Customer.deserialize(data)
         payload = customer.serialize()
         if self.current_edit_index == -1:
-            create_customer(payload)
+            success = create_customer(payload)
+            if success:
+                self.status_callback("Customer created successfully")
+            else:
+                self.status_callback("Failed to create customer", True)
         else:
             raw_customers = get_all_customers()
             if raw_customers and 0 <= self.current_edit_index < len(raw_customers):
                 customer_id = raw_customers[self.current_edit_index]['id']
-                update_customer(customer_id, payload)
+                success = update_customer(customer_id, payload)
+                if success:
+                    self.status_callback("Customer updated successfully")
+                else:
+                    self.status_callback("Failed to update customer", True)
         self.update_view()
         self.view.show_table()
 

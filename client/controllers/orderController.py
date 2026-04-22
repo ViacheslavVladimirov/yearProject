@@ -8,6 +8,7 @@ class OrderController:
         self.view = view
         self.customer_view = customer_view
         self.product_view = product_view
+        self.status_callback = lambda m, e=False: None
         
         self.on_orders_changed_callbacks = []
 
@@ -87,12 +88,20 @@ class OrderController:
         }
 
         if self.current_edit_index == -1:
-            create_order(payload)
+            success = create_order(payload)
+            if success:
+                self.status_callback("Order created successfully")
+            else:
+                self.status_callback("Failed to create order", True)
         else:
             orders = self.get_orders_processed()
             if 0 <= self.current_edit_index < len(orders):
                 order_id = orders[self.current_edit_index]['id']
-                update_order(order_id, payload)
+                success = update_order(order_id, payload)
+                if success:
+                    self.status_callback("Order updated successfully")
+                else:
+                    self.status_callback("Failed to update order", True)
         
         self.update_view()
         self.view.show_table()
@@ -135,7 +144,11 @@ class OrderController:
                     'items': items
                 }
                 
-                update_order(order_data['id'], payload)
+                success = update_order(order_data['id'], payload)
+                if success:
+                    self.status_callback("Order collected and paid successfully")
+                else:
+                    self.status_callback("Failed to update order status", True)
                 self.update_view()
                 
                 # Refresh view mode

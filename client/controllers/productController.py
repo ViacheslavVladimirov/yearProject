@@ -5,6 +5,7 @@ from models.product import Product
 class ProductController:
     def __init__(self, view):
         self.view = view
+        self.status_callback = lambda m, e=False: None
 
         # Connect view signals to controller actions
         self.view.add_requested.connect(self.on_add_requested)
@@ -40,19 +41,31 @@ class ProductController:
             raw_products = get_all_products()
             if raw_products and 0 <= index < len(raw_products):
                 product_id = raw_products[index]['id']
-                delete_product(product_id)
+                success = delete_product(product_id)
+                if success:
+                    self.status_callback("Product deleted successfully")
+                else:
+                    self.status_callback("Failed to delete product", True)
                 self.update_view()
 
     def on_save_requested(self, data):
         product = Product.deserialize(data)
         payload = product.serialize()
         if self.current_edit_index == -1:
-            create_product(payload)
+            success = create_product(payload)
+            if success:
+                self.status_callback("Product created successfully")
+            else:
+                self.status_callback("Failed to create product", True)
         else:
             raw_products = get_all_products()
             if raw_products and 0 <= self.current_edit_index < len(raw_products):
                 product_id = raw_products[self.current_edit_index]['id']
-                update_product(product_id, payload)
+                success = update_product(product_id, payload)
+                if success:
+                    self.status_callback("Product updated successfully")
+                else:
+                    self.status_callback("Failed to update product", True)
         self.update_view()
         self.view.show_table()
 
