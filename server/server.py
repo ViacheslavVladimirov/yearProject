@@ -1,5 +1,6 @@
 import socket
 import json
+import threading
 from decimal import Decimal
 from datetime import date
 
@@ -16,14 +17,33 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return obj.isoformat()
         return super().default(obj)
 
-def recv_all(sock):
-    data = b''
-    while True:
-        part = sock.recv(4096)
-        if not part:
+def send_msg(sock, msg):
+    # Prefix each message with a 10-byte length header
+    msg_bytes = msg.encode('utf-8')
+    header = f"{len(msg_bytes):010d}".encode('utf-8')
+    sock.sendall(header + msg_bytes)
+
+def recv_msg(sock):
+    # Read the 10-byte length header
+    try:
+        header_data = sock.recv(10)
+        if not header_data:
+            return None
+        header = header_data.decode('utf-8')
+        msg_len = int(header)
+    except (ValueError, socket.error):
+        return None
+    
+    # Read the actual message body
+    chunks = []
+    bytes_recd = 0
+    while bytes_recd < msg_len:
+        chunk = sock.recv(min(msg_len - bytes_recd, 4096))
+        if chunk == b'':
             break
-        data += part
-    return data.decode('utf-8')
+        chunks.append(chunk)
+        bytes_recd += len(chunk)
+    return b''.join(chunks).decode('utf-8')
 
 def handle_list(entity):
     conn = get_connection()
@@ -152,7 +172,7 @@ def handle_delete(entity, entity_id):
 
 def handle_client(client_socket):
     try:
-        data = recv_all(client_socket)
+        data = recv_msg(client_socket)
         if not data:
             return
         print(f"Received request: {data}")
@@ -183,24 +203,29 @@ def handle_client(client_socket):
             print("Sending response: OK")
         else:
             print(f"Sending response: {response}")
-        client_socket.send(response.encode('utf-8'))
+        send_msg(client_socket, response)
     except Exception as e:
         print(f"request handling error: {e}")
-        print(f"Sending response: ERROR {str(e)}")
-        client_socket.send(f"ERROR {str(e)}".encode('utf-8'))
+        try:
+            send_msg(client_socket, f"ERROR {str(e)}")
+        except:
+            pass
     finally:
         client_socket.close()
 
 def start_server():
     init_db()
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('192.168.1.15', 9999))
-    server.listen(5)
+    # Using 0.0.0.0 to listen on all available interfaces
+    server.bind(('0.0.0.0', 9999))
+    server.listen(10)
     print("Server listening on port 9999")
     while True:
         client, addr = server.accept()
         print(f"Accepted connection from {addr}")
-        handle_client(client)
+        # Handle each client in a new thread
+        thread = threading.Thread(target=handle_client, args=(client,))
+        thread.start()
 
 if __name__ == "__main__":
     start_server()
