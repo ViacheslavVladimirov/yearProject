@@ -1,6 +1,17 @@
 import socket
 import json
+import logging
 from pathlib import Path
+
+log_path = Path(__file__).parent.parent / 'client.log'
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_path),
+        logging.StreamHandler()
+    ]
+)
 
 def load_config():
     config_path = Path(__file__).parent.parent / 'client_config.json'
@@ -37,6 +48,9 @@ def recv_msg(sock):
     return b''.join(chunks).decode('utf-8')
 
 def send_command(command):
+    if not command.startswith("PING"):
+        logging.info(f"Sending: {command}")
+    
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.settimeout(5.0)
@@ -47,6 +61,9 @@ def send_command(command):
         response = recv_msg(client)
         client.close()
         
+        if not command.startswith("PING"):
+            logging.info(f"Received: {response[:100]}..." if response and len(response) > 100 else f"Received: {response}")
+
         if response and response.startswith("OK"):
             body = response[3:].strip()
 
@@ -61,7 +78,10 @@ def send_command(command):
         else:
             return response if response else "ERROR Unknown server error"
     except Exception as e:
-        return f"ERROR Network error: {str(e)}"
+        err_msg = f"ERROR Network error: {str(e)}"
+        if not command.startswith("PING"):
+            logging.error(err_msg)
+        return err_msg
 
 def get_all_products():
     return send_command("LIST PRODUCTS")

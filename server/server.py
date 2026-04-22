@@ -1,10 +1,21 @@
 import socket
 import json
 import threading
+import logging
 from pathlib import Path
 from decimal import Decimal
 from datetime import date
 from db import get_connection
+
+log_path = Path(__file__).parent / 'server.log'
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_path),
+        logging.StreamHandler()
+    ]
+)
 
 def load_config():
     config_path = Path(__file__).parent / 'server_config.json'
@@ -174,9 +185,13 @@ def handle_client(client_socket):
         data = recv_msg(client_socket)
         if not data:
             return
-        print(f"Received request: {data}")
+        
         parts = data.split(' ', 1)
         command = parts[0]
+        
+        if command != "PING":
+            logging.info(f"Received: {data}")
+
         response = "ERROR Invalid command"
         
         if command == "PING":
@@ -198,14 +213,13 @@ def handle_client(client_socket):
             del_parts = parts[1].split(' ', 1)
             response = handle_delete(del_parts[0], del_parts[1])
         
-        if response.startswith("OK"):
-            print("Sending response: OK")
-        else:
-            print(f"Sending response: {response}")
+        if command != "PING":
+            logging.info(f"Sent: {response[:100]}..." if len(response) > 100 else f"Sent: {response}")
+        
         send_msg(client_socket, response)
     except Exception as e:
         error_msg = f"ERROR Server error: {str(e)}"
-        print(f"request handling error: {error_msg}")
+        logging.error(f"Error handling request: {error_msg}")
         try:
             send_msg(client_socket, error_msg)
         except:
@@ -219,11 +233,9 @@ def start_server():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((server_config['host'], server_config['port']))
     server.listen(10)
-    print(f"Server listening on {server_config['host']}:{server_config['port']}")
+    logging.info(f"Server started on {server_config['host']}:{server_config['port']}")
     while True:
         client, addr = server.accept()
-        print(f"Accepted connection from {addr}")
-
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
 
