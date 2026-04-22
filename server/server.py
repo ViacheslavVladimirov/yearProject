@@ -1,6 +1,7 @@
 import socket
 import json
 import threading
+from pathlib import Path
 from decimal import Decimal
 from datetime import date
 
@@ -8,6 +9,11 @@ try:
     from db import get_connection
 except ImportError:
     from server.db import get_connection
+
+def load_config():
+    config_path = Path(__file__).parent / 'server_config.json'
+    with open(config_path, 'r') as f:
+        return json.load(f)
 
 class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -215,11 +221,12 @@ def handle_client(client_socket):
         client_socket.close()
 
 def start_server():
+    config = load_config()
+    server_config = config['server']
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Using 0.0.0.0 to listen on all available interfaces
-    server.bind(('0.0.0.0', 9999))
+    server.bind((server_config['host'], server_config['port']))
     server.listen(10)
-    print("Server listening on port 9999")
+    print(f"Server listening on {server_config['host']}:{server_config['port']}")
     while True:
         client, addr = server.accept()
         print(f"Accepted connection from {addr}")
@@ -227,4 +234,5 @@ def start_server():
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
 
-start_server()
+if __name__ == "__main__":
+    start_server()

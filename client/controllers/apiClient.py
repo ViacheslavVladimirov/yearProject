@@ -1,8 +1,15 @@
 import socket
 import json
+from pathlib import Path
 
-SERVER_HOST = 'localhost' 
-SERVER_PORT = 9999
+def load_config():
+    config_path = Path(__file__).parent.parent / 'client_config.json'
+    with open(config_path, 'r') as f:
+        return json.load(f)
+
+config = load_config()
+SERVER_HOST = config['server_host']
+SERVER_PORT = config['server_port']
 
 def send_msg(sock, msg):
     msg_bytes = msg.encode('utf-8')
