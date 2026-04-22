@@ -4,11 +4,7 @@ import threading
 from pathlib import Path
 from decimal import Decimal
 from datetime import date
-
-try:
-    from db import get_connection
-except ImportError:
-    from server.db import get_connection
+from db import get_connection
 
 def load_config():
     config_path = Path(__file__).parent / 'server_config.json'
@@ -24,13 +20,11 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 def send_msg(sock, msg):
-    # Prefix each message with a 10-byte length header
     msg_bytes = msg.encode('utf-8')
     header = f"{len(msg_bytes):010d}".encode('utf-8')
     sock.sendall(header + msg_bytes)
 
 def recv_msg(sock):
-    # Read the 10-byte length header
     try:
         header_data = sock.recv(10)
         if not header_data:
@@ -39,8 +33,7 @@ def recv_msg(sock):
         msg_len = int(header)
     except (ValueError, socket.error):
         return None
-    
-    # Read the actual message body
+
     chunks = []
     bytes_recd = 0
     while bytes_recd < msg_len:
@@ -230,9 +223,8 @@ def start_server():
     while True:
         client, addr = server.accept()
         print(f"Accepted connection from {addr}")
-        # Handle each client in a new thread
+
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
 
-if __name__ == "__main__":
-    start_server()
+start_server()
