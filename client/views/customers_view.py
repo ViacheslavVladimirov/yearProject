@@ -19,17 +19,14 @@ class CustomersView(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
-        """Creates the customers management interface."""
         self.main_layout = QVBoxLayout(self)
 
         self.stack = QStackedWidget()
         self.main_layout.addWidget(self.stack)
 
-        # Page 1: Table View
         self.table_page = QWidget()
         table_layout = QVBoxLayout(self.table_page)
 
-        # Search Bar
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Search:"))
         self.search_input = QLineEdit()
@@ -65,7 +62,6 @@ class CustomersView(QWidget):
         table_layout.addWidget(self.customers_table)
         table_layout.addLayout(button_layout)
 
-        # Page 2: Form View
         self.form_page = CustomerForm(
             on_save=lambda: self.save_requested.emit(self.form_page.get_data()), 
             on_cancel=lambda: self.cancel_requested.emit()
@@ -74,7 +70,6 @@ class CustomersView(QWidget):
         self.stack.addWidget(self.table_page)
         self.stack.addWidget(self.form_page)
 
-        # Connect signals
         self.customers_table.itemSelectionChanged.connect(self.update_buttons_state)
         self.add_cust_btn.clicked.connect(self.add_requested.emit)
         self.edit_cust_btn.clicked.connect(self._on_edit_clicked)

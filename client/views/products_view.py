@@ -19,7 +19,6 @@ class ProductsView(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
-        """Creates the products management interface."""
         self.main_layout = QVBoxLayout(self)
         
         self.stack = QStackedWidget()

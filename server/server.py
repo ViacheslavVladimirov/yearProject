@@ -205,9 +205,10 @@ def handle_client(client_socket):
             print(f"Sending response: {response}")
         send_msg(client_socket, response)
     except Exception as e:
-        print(f"request handling error: {e}")
+        error_msg = f"ERROR Server error: {str(e)}"
+        print(f"request handling error: {error_msg}")
         try:
-            send_msg(client_socket, f"ERROR {str(e)}")
+            send_msg(client_socket, error_msg)
         except:
             pass
     finally:
@@ -226,5 +227,4 @@ def start_server():
         thread = threading.Thread(target=handle_client, args=(client,))
         thread.start()
 
-if __name__ == "__main__":
-    start_server()
+start_server()

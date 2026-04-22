@@ -3,14 +3,14 @@ USE year_project;
 
 CREATE TABLE IF NOT EXISTS customers (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    phone VARCHAR(50)
+    name VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) UNIQUE,
+    phone VARCHAR(50) UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL UNIQUE,
     price DECIMAL(10, 2),
     stock INT
 );
@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     (8, '2026-04-05', 'Hannah Abbott', 'Split', TRUE, 50.00),
     (9, '2026-04-10', 'Ian Wright', 'Payconic', FALSE, 1280.00),
     (10, '2026-04-15', 'Julia Roberts', 'Cash', TRUE, 150.00);
+
     INSERT INTO order_items (order_id, product_name, price, amount) VALUES
     (1, 'Laptop', 1200.00, 1),
     (1, 'Mouse', 25.00, 1),

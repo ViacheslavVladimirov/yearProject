@@ -24,7 +24,6 @@ class ProductForm(QWidget):
         layout.addRow("Price:", self.price_input)
         layout.addRow("Stock:", self.stock_input)
 
-        # Buttons
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Save")
         self.cancel_btn = QPushButton("Cancel")

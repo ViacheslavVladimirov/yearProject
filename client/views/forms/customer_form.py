@@ -28,7 +28,6 @@ class CustomerForm(QWidget):
         layout.addRow("Email:", self.email_input)
         layout.addRow("Phone Number:", self.phone_input)
 
-        # Buttons
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Save")
         self.cancel_btn = QPushButton("Cancel")

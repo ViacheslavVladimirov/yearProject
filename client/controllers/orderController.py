@@ -1,7 +1,4 @@
 from .apiClient import get_all_orders, create_order, update_order, get_all_customers, get_all_products
-from models.order import Order
-from models.customer import Customer
-from models.product import Product
 
 class OrderController:
     def __init__(self, view, customer_view, product_view):
@@ -18,58 +15,78 @@ class OrderController:
         self.view.cancel_requested.connect(self.on_cancel_requested)
         self.view.collect_requested.connect(self.on_collect_requested)
 
+    def _handle_api_response(self, response, success_msg):
+        if isinstance(response, str) and response.startswith("ERROR"):
+            self.status_callback(response, True)
+            return None
+        if response is True or isinstance(response, (list, dict)):
+            if success_msg:
+                self.status_callback(success_msg)
+            return response
+        return None
+
     def get_orders_processed(self):
-        raw_orders = get_all_orders() or []
+        response = get_all_orders()
+        raw_orders = self._handle_api_response(response, None)
+        if raw_orders is None:
+            return []
+            
         orders = []
         for ro in raw_orders:
-            order_obj = Order.deserialize(ro)
-            # Add fields for UI display that aren't in the model but derived
-            # Or ensure model has them.
-            data = order_obj.serialize()
-            data['date'] = str(ro.get('order_date', ''))
-            data['customer'] = ro.get('customer_name', '')
-            data['payment'] = ro.get('payment_method', '')
-            data['is_delivered'] = bool(ro.get('is_delivered', False))
-            data['total'] = float(ro.get('total_price', 0.0))
-            
-            # Map item keys for UI
+            data = {
+                'id': ro.get('id'),
+                'date': str(ro.get('order_date', '')),
+                'customer': ro.get('customer_name', ''),
+                'payment': ro.get('payment_method', ''),
+                'is_delivered': bool(ro.get('is_delivered', False)),
+                'total': float(ro.get('total_price', 0.0))
+            }
+
             processed_items = []
             for item in ro.get('items', []):
                 processed_items.append({
                     'name': item.get('product_name', ''),
-                    'price': item.get('price', 0.0),
-                    'amount': item.get('amount', 0)
+                    'price': float(item.get('price', 0.0)),
+                    'amount': int(item.get('amount', 0))
                 })
             data['items'] = processed_items
             orders.append(data)
         return orders
 
     def update_view(self):
-        self.view.display_orders(self.get_orders_processed())
+        orders = self.get_orders_processed()
+        self.view.display_orders(orders)
         for callback in self.on_orders_changed_callbacks:
             callback()
 
     def on_add_requested(self):
         self.current_edit_index = -1
-        raw_customers = get_all_customers() or []
-        customers = [Customer.deserialize(c).name for c in raw_customers]
-        raw_products = get_all_products() or []
-        products = [Product.deserialize(p).serialize() for p in raw_products]
-        self.view.show_form(None, customers, products)
+        
+        c_res = get_all_customers()
+        raw_customers = self._handle_api_response(c_res, None) or []
+        customers = [c.get('name', '') for c in raw_customers]
+        
+        p_res = get_all_products()
+        raw_products = self._handle_api_response(p_res, None) or []
+        
+        self.view.show_form(None, customers, raw_products)
 
     def on_view_requested(self, index):
         self.current_edit_index = index
         orders = self.get_orders_processed()
         if 0 <= index < len(orders):
             order_data = orders[index]
-            raw_customers = get_all_customers() or []
-            customers = [Customer.deserialize(c).name for c in raw_customers]
-            raw_products = get_all_products() or []
-            products = [Product.deserialize(p).serialize() for p in raw_products]
-            self.view.show_view_mode(order_data, customers, products)
+            
+            c_res = get_all_customers()
+            raw_customers = self._handle_api_response(c_res, None) or []
+            customers = [c.get('name', '') for c in raw_customers]
+            
+            p_res = get_all_products()
+            raw_products = self._handle_api_response(p_res, None) or []
+            
+            self.view.show_view_mode(order_data, customers, raw_products)
 
     def on_save_requested(self, data):
-        # Remap from view format to model/server format
         items = []
         for item in data.get('items', []):
             items.append({
@@ -88,23 +105,18 @@ class OrderController:
         }
 
         if self.current_edit_index == -1:
-            success = create_order(payload)
-            if success:
-                self.status_callback("Order created successfully")
-            else:
-                self.status_callback("Failed to create order", True)
+            res = create_order(payload)
+            if self._handle_api_response(res, "Order created successfully"):
+                self.update_view()
+                self.view.show_table()
         else:
             orders = self.get_orders_processed()
             if 0 <= self.current_edit_index < len(orders):
                 order_id = orders[self.current_edit_index]['id']
-                success = update_order(order_id, payload)
-                if success:
-                    self.status_callback("Order updated successfully")
-                else:
-                    self.status_callback("Failed to update order", True)
-        
-        self.update_view()
-        self.view.show_table()
+                res = update_order(order_id, payload)
+                if self._handle_api_response(res, "Order updated successfully"):
+                    self.update_view()
+                    self.view.show_table()
 
     def on_cancel_requested(self):
         self.view.show_table()
@@ -125,8 +137,7 @@ class OrderController:
 
                 order_data['payment'] = current_payment
                 order_data['is_delivered'] = True
-                
-                # Payload for server update, remapping items
+
                 items = []
                 for item in order_data.get('items', []):
                     items.append({
@@ -144,16 +155,15 @@ class OrderController:
                     'items': items
                 }
                 
-                success = update_order(order_data['id'], payload)
-                if success:
-                    self.status_callback("Order collected and paid successfully")
-                else:
-                    self.status_callback("Failed to update order status", True)
-                self.update_view()
-                
-                # Refresh view mode
-                raw_customers = get_all_customers() or []
-                customers = [Customer.deserialize(c).name for c in raw_customers]
-                raw_products = get_all_products() or []
-                products = [Product.deserialize(p).serialize() for p in raw_products]
-                self.view.show_view_mode(order_data, customers, products)
+                res = update_order(order_data['id'], payload)
+                if self._handle_api_response(res, "Order collected and paid successfully"):
+                    self.update_view()
+
+                    c_res = get_all_customers()
+                    raw_customers = self._handle_api_response(c_res, None) or []
+                    customers = [c.get('name', '') for c in raw_customers]
+                    
+                    p_res = get_all_products()
+                    raw_products = self._handle_api_response(p_res, None) or []
+                    
+                    self.view.show_view_mode(order_data, customers, raw_products)
