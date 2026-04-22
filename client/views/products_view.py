@@ -40,7 +40,8 @@ class ProductsView(QWidget):
 
         self.products_table = QTableWidget()
         self.products_table.setColumnCount(3)
-        self.products_table.setHorizontalHeaderLabels(["Name", "Price", "Stock"])
+        self.products_table.setHorizontalHeaderLabels(["Name", "Price in euro", "Stock"])
+        self.products_table.setSortingEnabled(True)
         self.products_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.products_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.products_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -104,11 +105,22 @@ class ProductsView(QWidget):
             self.products_table.setRowHidden(row, not match)
 
     def display_products(self, products):
+        self.products_table.setSortingEnabled(False)
         self.products_table.setRowCount(len(products))
         for row, product in enumerate(products):
             self.products_table.setItem(row, 0, QTableWidgetItem(str(product['name'])))
-            self.products_table.setItem(row, 1, QTableWidgetItem(str(product['price'])))
-            self.products_table.setItem(row, 2, QTableWidgetItem(str(product['stock'])))
+            
+            # Price Column
+            price_item = QTableWidgetItem()
+            price_item.setData(Qt.ItemDataRole.DisplayRole, float(product.get('price', 0.0)))
+            self.products_table.setItem(row, 1, price_item)
+            
+            # Stock Column
+            stock_item = QTableWidgetItem()
+            stock_item.setData(Qt.ItemDataRole.DisplayRole, int(product.get('stock', 0)))
+            self.products_table.setItem(row, 2, stock_item)
+            
+        self.products_table.setSortingEnabled(True)
         self.filter_products(self.search_input.text())
 
     def show_form(self, product_data=None):

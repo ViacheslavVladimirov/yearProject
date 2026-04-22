@@ -41,6 +41,7 @@ class CustomersView(QWidget):
         self.customers_table = QTableWidget()
         self.customers_table.setColumnCount(3)
         self.customers_table.setHorizontalHeaderLabels(["Customer Name", "Email", "Phone Number"])
+        self.customers_table.setSortingEnabled(True)
         
         self.customers_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.customers_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)

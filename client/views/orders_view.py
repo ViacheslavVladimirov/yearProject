@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem, QPushButton, QHeaderView, 
     QAbstractItemView, QStackedWidget, QCheckBox, QDialog
 )
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from views.forms.order_form import OrderForm, PaymentDialog
 
 class OrdersView(QWidget):
@@ -34,7 +34,8 @@ class OrdersView(QWidget):
 
         self.orders_table = QTableWidget()
         self.orders_table.setColumnCount(6)
-        self.orders_table.setHorizontalHeaderLabels(["Order ID", "Date", "Customer", "Payment", "Delivered", "Total Price"])
+        self.orders_table.setHorizontalHeaderLabels(["Order ID", "Date", "Customer", "Payment", "Delivered", "Total Price in euro"])
+        self.orders_table.setSortingEnabled(True)
         self.orders_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.orders_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.orders_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -77,16 +78,28 @@ class OrdersView(QWidget):
         self.view_order_btn.setEnabled(has_selection)
 
     def display_orders(self, orders):
+        self.orders_table.setSortingEnabled(False)
         self.orders_table.setRowCount(len(orders))
         for row, order in enumerate(orders):
-            self.orders_table.setItem(row, 0, QTableWidgetItem(str(order.get('id', ''))))
+            # ID Column
+            id_item = QTableWidgetItem()
+            id_item.setData(Qt.ItemDataRole.DisplayRole, order.get('id', 0))
+            self.orders_table.setItem(row, 0, id_item)
+            
             self.orders_table.setItem(row, 1, QTableWidgetItem(str(order.get('date', ''))))
             self.orders_table.setItem(row, 2, QTableWidgetItem(str(order.get('customer', ''))))
             self.orders_table.setItem(row, 3, QTableWidgetItem(str(order.get('payment', ''))))
+            
             delivered_text = "Yes" if order.get('is_delivered') else "No"
             self.orders_table.setItem(row, 4, QTableWidgetItem(delivered_text))
-            total = order.get('total', 0.0)
-            self.orders_table.setItem(row, 5, QTableWidgetItem(f"€ {float(total):.2f}"))
+            
+            # Total Price Column
+            total = float(order.get('total', 0.0))
+            total_item = QTableWidgetItem()
+            total_item.setData(Qt.ItemDataRole.DisplayRole, total)
+            self.orders_table.setItem(row, 5, total_item)
+            
+        self.orders_table.setSortingEnabled(True)
         self.apply_filter()
 
     def show_form(self, order_data, customers, products):
