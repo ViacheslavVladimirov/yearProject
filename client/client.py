@@ -1,6 +1,6 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QMainWindow, QTabWidget, QStackedWidget
-from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QMainWindow, QTabWidget, QStackedWidget, QPushButton
+from PyQt6.QtCore import QTimer, Qt
 
 from views.orders_view import OrdersView
 from views.products_view import ProductsView
@@ -46,6 +46,12 @@ class OrderEditorWindow(QMainWindow):
         self.tabs.addTab(self.products_tab, "Products")
         self.tabs.addTab(self.customers_tab, "Customers")
         self.tabs.addTab(self.overview_tab, "Overview")
+        
+        # Add Global Refresh Button in the corner
+        self.global_refresh_btn = QPushButton("Refresh All")
+        self.global_refresh_btn.clicked.connect(self.refresh_all_views)
+        self.tabs.setCornerWidget(self.global_refresh_btn, Qt.Corner.TopRightCorner)
+        
         self.main_layout.addWidget(self.tabs)
         
         self.stacked_widget.addWidget(self.main_container)
