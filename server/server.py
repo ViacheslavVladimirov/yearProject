@@ -104,25 +104,24 @@ def handle_get(entity, entity_id=None):
         return "ERROR DB connection failed"
     cursor = conn.cursor(dictionary=True)
     if entity == "STATS":
-        query = "SELECT order_items.amount, order_items.price FROM order_items"
+        query = "SELECT SUM(orders.total_price), SUM(order_items.amount) FROM year_project.orders JOIN year_project.order_items ON order_items.order_id = orders.id WHERE orders.order_date BETWEEN %s AND %s"
         params = []
+
         if entity_id:
             try:
                 filters = json.loads(entity_id)
                 if 'start_date' in filters and 'end_date' in filters:
-                    query += " JOIN orders ON order_items.order_id = orders.id WHERE orders.order_date BETWEEN %s AND %s"
                     params = [filters['start_date'], filters['end_date']]
+
             except json.JSONDecodeError:
                 pass
         
         cursor.execute(query, params)
-        items = cursor.fetchall()
-        total_products, total_revenue = 0, 0.0
-        for item in items:
-            amount = int(item.get('amount', 0))
-            price = float(item.get('price', 0))
-            total_products += amount
-            total_revenue += amount * price
+        stats = cursor.fetchone()
+        print(stats)
+        total_revenue = float(stats['SUM(orders.total_price)'])
+        total_products = int(stats['SUM(order_items.amount)'])
+
         response = f"OK {json.dumps({'total_products': total_products, 'total_revenue': total_revenue}, cls=EnhancedJSONEncoder)}"
     else:
         if not entity_id:
