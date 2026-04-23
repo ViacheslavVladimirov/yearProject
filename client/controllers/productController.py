@@ -5,6 +5,7 @@ class ProductController:
     def __init__(self, view):
         self.view = view
         self.status_callback = lambda m, e=False: None
+        self.current_product_id = None
 
         self.view.add_requested.connect(self.on_add_requested)
         self.view.edit_requested.connect(self.on_edit_requested)
@@ -29,18 +30,18 @@ class ProductController:
             self.view.display_products(products)
 
     def on_add_requested(self):
-        self.current_edit_index = -1
+        self.current_product_id = None
         self.view.show_form()
 
-    def on_edit_requested(self, index):
-        self.current_edit_index = index
+    def on_edit_requested(self, product_id):
+        self.current_product_id = product_id
         response = get_all_products()
-        products = self._handle_api_response(response, None)
-        if products and 0 <= index < len(products):
-            product_data = products[index]
+        products = self._handle_api_response(response, None) or []
+        product_data = next((p for p in products if p['id'] == product_id), None)
+        if product_data:
             self.view.show_form(product_data)
 
-    def on_delete_requested(self, index):
+    def on_delete_requested(self, product_id):
         reply = QMessageBox.question(
             self.view, 'Delete Product',
             'Are you sure you want to delete this product?',
@@ -48,13 +49,9 @@ class ProductController:
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            response = get_all_products()
-            products = self._handle_api_response(response, None)
-            if products and 0 <= index < len(products):
-                product_id = products[index]['id']
-                res = delete_product(product_id)
-                if self._handle_api_response(res, "Product deleted successfully"):
-                    self.update_view()
+            res = delete_product(product_id)
+            if self._handle_api_response(res, "Product deleted successfully"):
+                self.update_view()
 
     def on_save_requested(self, data):
         payload = {
@@ -62,20 +59,16 @@ class ProductController:
             "price": data.get("price", 0.0),
             "stock": data.get("stock", 0)
         }
-        if self.current_edit_index == -1:
+        if self.current_product_id is None:
             res = create_product(payload)
             if self._handle_api_response(res, "Product created successfully"):
                 self.update_view()
                 self.view.show_table()
         else:
-            response = get_all_products()
-            products = self._handle_api_response(response, None)
-            if products and 0 <= self.current_edit_index < len(products):
-                product_id = products[self.current_edit_index]['id']
-                res = update_product(product_id, payload)
-                if self._handle_api_response(res, "Product updated successfully"):
-                    self.update_view()
-                    self.view.show_table()
+            res = update_product(self.current_product_id, payload)
+            if self._handle_api_response(res, "Product updated successfully"):
+                self.update_view()
+                self.view.show_table()
 
     def on_cancel_requested(self):
         self.view.show_table()

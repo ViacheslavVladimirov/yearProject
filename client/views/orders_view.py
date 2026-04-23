@@ -81,7 +81,10 @@ class OrdersView(QWidget):
     def _on_view_clicked(self):
         row = self.orders_table.currentRow()
         if row >= 0:
-            self.view_requested.emit(row)
+            id_item = self.orders_table.item(row, 0)
+            if id_item:
+                order_id = id_item.data(Qt.ItemDataRole.DisplayRole)
+                self.view_requested.emit(order_id)
 
     def update_buttons_state(self):
         has_selection = len(self.orders_table.selectedItems()) > 0

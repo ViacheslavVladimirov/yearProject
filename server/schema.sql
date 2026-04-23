@@ -33,61 +33,36 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
     );
 
-    -- Seed Data
     INSERT INTO products (name, price, stock) VALUES
-    ('Laptop', 1200.00, 15),
-    ('Mouse', 25.00, 50),
-    ('Keyboard', 45.00, 30),
-    ('Monitor', 200.00, 20),
-    ('Desk Chair', 150.00, 10),
-    ('Desk Lamp', 35.00, 25),
-    ('USB-C Cable', 15.00, 100),
-    ('Webcam', 60.00, 15),
-    ('Headset', 80.00, 12),
-    ('External HDD', 90.00, 18);
+    ('Geurverspreider', 8.50, 15),
+    ('Geurolie-eucalyptus', 8.50, 30),
+    ('Geurolie-lavendel', 8.50, 30),
+    ('Geurolie-vanille', 8.50, 30),
+    ('Geurolie-cocosnoot', 8.50, 30),
+    ('Geurolie-rose geranium', 8.50, 30),
+    ('Geurolie-kaneel', 8.50, 30),
+    ('Geurolie-jasmijn', 8.50, 30);
 
     INSERT INTO customers (name, email, phone) VALUES
-    ('Alice Johnson', 'alice.j@example.com', '555-0101'),
-    ('Bob Smith', 'bob.s@example.com', '555-0102'),
-    ('Charlie Brown', 'charlie.b@example.com', '555-0103'),
-    ('Diana Prince', 'diana.p@example.com', '555-0104'),
-    ('Edward Norton', 'edward.n@example.com', '555-0105'),
-    ('Fiona Gallagher', 'fiona.g@example.com', '555-0106'),
-    ('George Miller', 'george.m@example.com', '555-0107'),
-    ('Hannah Abbott', 'hannah.a@example.com', '555-0108'),
-    ('Ian Wright', 'ian.w@example.com', '555-0109'),
-    ('Julia Roberts', 'julia.r@example.com', '555-0110');
+    ('Jan Janssen', 'jan.janssen@mail.com', '0470/12.34.56'),
+    ('Marie Peeters', 'marie.peeters@mail.com', '0471/23.45.67'),
+    ('Luc De Smet', 'luc.desmet@mail.com', '0472/34.56.78'),
+    ('Sofie Vermeulen', 'sofie.vermeulen@mail.com', '0473/45.67.89'),
+    ('Tom Claes', 'tom.claes@mail.com', '0474/56.78.90'),
+    ('Annelies Maes', 'annelies.maes@mail.com', '0475/67.89.01'),
+    ('Wim Jacobs', 'wim.jacobs@mail.com', '0476/78.90.12'),
+    ('Katrien Willems', 'katrien.willems@mail.com', '0477/89.01.23'),
+    ('Bart Mertens', 'bart.mertens@mail.com', '0478/90.12.34'),
+    ('Els Goossens', 'els.goossens@mail.com', '0479/01.23.45');
 
     INSERT INTO orders (id, order_date, customer_name, payment_method, is_delivered, total_price) VALUES
-    (1, '2026-03-01', 'Alice Johnson', 'Payconic', TRUE, 1225.00),
-    (2, '2026-03-05', 'Bob Smith', 'Cash', TRUE, 245.00),
-    (3, '2026-03-10', 'Charlie Brown', 'Payconic', TRUE, 185.00),
-    (4, '2026-03-15', 'Diana Prince', 'Split', TRUE, 75.00),
-    (5, '2026-03-20', 'Edward Norton', 'Payconic', FALSE, 170.00),
-    (6, '2026-03-25', 'Fiona Gallagher', 'Cash', TRUE, 1200.00),
-    (7, '2026-04-01', 'George Miller', 'Payconic', FALSE, 270.00),
-    (8, '2026-04-05', 'Hannah Abbott', 'Split', TRUE, 50.00),
-    (9, '2026-04-10', 'Ian Wright', 'Payconic', FALSE, 1280.00),
-    (10, '2026-04-15', 'Julia Roberts', 'Cash', TRUE, 150.00);
+    (1, '2026-04-20', 'Jan Janssen', 'Payconic', TRUE, 25.50),
+    (2, '2026-04-21', 'Marie Peeters', 'Cash', TRUE, 17.00),
+    (3, '2026-04-22', 'Luc De Smet', 'Split', FALSE, 8.50);
 
     INSERT INTO order_items (order_id, product_name, price, amount) VALUES
-    (1, 'Laptop', 1200.00, 1),
-    (1, 'Mouse', 25.00, 1),
-    (2, 'Monitor', 200.00, 1),
-    (2, 'Keyboard', 45.00, 1),
-    (3, 'Desk Chair', 150.00, 1),
-    (3, 'Desk Lamp', 35.00, 1),
-    (4, 'Webcam', 60.00, 1),
-    (4, 'USB-C Cable', 15.00, 1),
-    (5, 'Headset', 80.00, 1),
-    (5, 'External HDD', 90.00, 1),
-    (6, 'Laptop', 1200.00, 1),
-    (7, 'Monitor', 200.00, 1),
-    (7, 'Mouse', 25.00, 2),
-    (7, 'Keyboard', 45.00, 1),
-    (8, 'Desk Lamp', 35.00, 1),
-    (8, 'USB-C Cable', 15.00, 1),
-    (9, 'Laptop', 1200.00, 1),
-    (9, 'Headset', 80.00, 1),
-    (10, 'External HDD', 90.00, 1),
-    (10, 'Webcam', 60.00, 1);
+    (1, 'Geurverspreider', 8.50, 1),
+    (1, 'Geurolie-eucalyptus', 8.50, 2),
+    (2, 'Geurolie-lavendel', 8.50, 1),
+    (2, 'Geurolie-vanille', 8.50, 1),
+    (3, 'Geurolie-cocosnoot', 8.50, 1);

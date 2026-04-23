@@ -5,6 +5,7 @@ class CustomerController:
     def __init__(self, view):
         self.view = view
         self.status_callback = lambda m, e=False: None
+        self.current_customer_id = None
 
         self.view.add_requested.connect(self.on_add_requested)
         self.view.edit_requested.connect(self.on_edit_requested)
@@ -29,18 +30,18 @@ class CustomerController:
             self.view.display_customers(customers)
 
     def on_add_requested(self):
-        self.current_edit_index = -1
+        self.current_customer_id = None
         self.view.show_form()
 
-    def on_edit_requested(self, index):
-        self.current_edit_index = index
+    def on_edit_requested(self, customer_id):
+        self.current_customer_id = customer_id
         response = get_all_customers()
-        customers = self._handle_api_response(response, None)
-        if customers and 0 <= index < len(customers):
-            customer_data = customers[index]
+        customers = self._handle_api_response(response, None) or []
+        customer_data = next((c for c in customers if c['id'] == customer_id), None)
+        if customer_data:
             self.view.show_form(customer_data)
 
-    def on_delete_requested(self, index):
+    def on_delete_requested(self, customer_id):
         reply = QMessageBox.question(
             self.view, 'Delete Customer',
             'Are you sure you want to delete this customer?',
@@ -48,13 +49,9 @@ class CustomerController:
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            response = get_all_customers()
-            customers = self._handle_api_response(response, None)
-            if customers and 0 <= index < len(customers):
-                customer_id = customers[index]['id']
-                res = delete_customer(customer_id)
-                if self._handle_api_response(res, "Customer deleted successfully"):
-                    self.update_view()
+            res = delete_customer(customer_id)
+            if self._handle_api_response(res, "Customer deleted successfully"):
+                self.update_view()
 
     def on_save_requested(self, data):
         payload = {
@@ -62,20 +59,16 @@ class CustomerController:
             "email": data.get("email", ""),
             "phone": data.get("phone", "")
         }
-        if self.current_edit_index == -1:
+        if self.current_customer_id is None:
             res = create_customer(payload)
             if self._handle_api_response(res, "Customer created successfully"):
                 self.update_view()
                 self.view.show_table()
         else:
-            response = get_all_customers()
-            customers = self._handle_api_response(response, None)
-            if customers and 0 <= self.current_edit_index < len(customers):
-                customer_id = customers[self.current_edit_index]['id']
-                res = update_customer(customer_id, payload)
-                if self._handle_api_response(res, "Customer updated successfully"):
-                    self.update_view()
-                    self.view.show_table()
+            res = update_customer(self.current_customer_id, payload)
+            if self._handle_api_response(res, "Customer updated successfully"):
+                self.update_view()
+                self.view.show_table()
 
     def on_cancel_requested(self):
         self.view.show_table()

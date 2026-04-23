@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QAbstractItemView, QStackedWidget,
     QLineEdit, QLabel
 )
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, Qt
 from views.forms.customer_form import CustomerForm
 
 class CustomersView(QWidget):
@@ -78,12 +78,18 @@ class CustomersView(QWidget):
     def _on_edit_clicked(self):
         row = self.customers_table.currentRow()
         if row >= 0:
-            self.edit_requested.emit(row)
+            id_item = self.customers_table.item(row, 0)
+            if id_item:
+                customer_id = id_item.data(Qt.ItemDataRole.UserRole)
+                self.edit_requested.emit(customer_id)
 
     def _on_delete_clicked(self):
         row = self.customers_table.currentRow()
         if row >= 0:
-            self.delete_requested.emit(row)
+            id_item = self.customers_table.item(row, 0)
+            if id_item:
+                customer_id = id_item.data(Qt.ItemDataRole.UserRole)
+                self.delete_requested.emit(customer_id)
 
     def update_buttons_state(self):
         has_selection = len(self.customers_table.selectedItems()) > 0
@@ -102,11 +108,15 @@ class CustomersView(QWidget):
             self.customers_table.setRowHidden(row, not match)
 
     def display_customers(self, customers):
+        self.customers_table.setSortingEnabled(False)
         self.customers_table.setRowCount(len(customers))
         for row, customer in enumerate(customers):
-            self.customers_table.setItem(row, 0, QTableWidgetItem(str(customer.get('name', ''))))
+            name_item = QTableWidgetItem(str(customer.get('name', '')))
+            name_item.setData(Qt.ItemDataRole.UserRole, customer['id'])
+            self.customers_table.setItem(row, 0, name_item)
             self.customers_table.setItem(row, 1, QTableWidgetItem(str(customer.get('email', ''))))
             self.customers_table.setItem(row, 2, QTableWidgetItem(str(customer.get('phone', ''))))
+        self.customers_table.setSortingEnabled(True)
         self.filter_customers(self.search_input.text())
 
     def show_form(self, customer_data=None):

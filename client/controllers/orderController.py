@@ -8,6 +8,7 @@ class OrderController:
         self.status_callback = lambda m, e=False: None
         
         self.on_orders_changed_callbacks = []
+        self.current_order_id = None
 
         self.view.add_requested.connect(self.on_add_requested)
         self.view.view_requested.connect(self.on_view_requested)
@@ -60,7 +61,7 @@ class OrderController:
             callback()
 
     def on_add_requested(self):
-        self.current_edit_index = -1
+        self.current_order_id = None
         
         c_res = get_all_customers()
         raw_customers = self._handle_api_response(c_res, None) or []
@@ -71,12 +72,12 @@ class OrderController:
         
         self.view.show_form(None, customers, raw_products)
 
-    def on_view_requested(self, index):
-        self.current_edit_index = index
+    def on_view_requested(self, order_id):
+        self.current_order_id = order_id
         orders = self.get_orders_processed()
-        if 0 <= index < len(orders):
-            order_data = orders[index]
-            
+        order_data = next((o for o in orders if o['id'] == order_id), None)
+        
+        if order_data:
             c_res = get_all_customers()
             raw_customers = self._handle_api_response(c_res, None) or []
             customers = [c.get('name', '') for c in raw_customers]
@@ -104,28 +105,26 @@ class OrderController:
             'items': items
         }
 
-        if self.current_edit_index == -1:
+        if self.current_order_id is None:
             res = create_order(payload)
             if self._handle_api_response(res, "Order created successfully"):
                 self.update_view()
                 self.view.show_table()
         else:
-            orders = self.get_orders_processed()
-            if 0 <= self.current_edit_index < len(orders):
-                order_id = orders[self.current_edit_index]['id']
-                res = update_order(order_id, payload)
-                if self._handle_api_response(res, "Order updated successfully"):
-                    self.update_view()
-                    self.view.show_table()
+            res = update_order(self.current_order_id, payload)
+            if self._handle_api_response(res, "Order updated successfully"):
+                self.update_view()
+                self.view.show_table()
 
     def on_cancel_requested(self):
         self.view.show_table()
 
     def on_collect_requested(self):
-        if self.current_edit_index >= 0:
+        if self.current_order_id is not None:
             orders = self.get_orders_processed()
-            if self.current_edit_index < len(orders):
-                order_data = orders[self.current_edit_index]
+            order_data = next((o for o in orders if o['id'] == self.current_order_id), None)
+            
+            if order_data:
                 current_payment = order_data.get('payment', 'None')
                 
                 if current_payment == "None" or not current_payment:

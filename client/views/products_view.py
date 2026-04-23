@@ -80,12 +80,18 @@ class ProductsView(QWidget):
     def _on_edit_clicked(self):
         row = self.products_table.currentRow()
         if row >= 0:
-            self.edit_requested.emit(row)
+            id_item = self.products_table.item(row, 0)
+            if id_item:
+                product_id = id_item.data(Qt.ItemDataRole.UserRole)
+                self.edit_requested.emit(product_id)
 
     def _on_delete_clicked(self):
         row = self.products_table.currentRow()
         if row >= 0:
-            self.delete_requested.emit(row)
+            id_item = self.products_table.item(row, 0)
+            if id_item:
+                product_id = id_item.data(Qt.ItemDataRole.UserRole)
+                self.delete_requested.emit(product_id)
 
     def update_buttons_state(self):
         has_selection = len(self.products_table.selectedItems()) > 0
@@ -107,7 +113,9 @@ class ProductsView(QWidget):
         self.products_table.setSortingEnabled(False)
         self.products_table.setRowCount(len(products))
         for row, product in enumerate(products):
-            self.products_table.setItem(row, 0, QTableWidgetItem(str(product['name'])))
+            name_item = QTableWidgetItem(str(product['name']))
+            name_item.setData(Qt.ItemDataRole.UserRole, product['id'])
+            self.products_table.setItem(row, 0, name_item)
             
             # Price Column
             price_item = QTableWidgetItem()

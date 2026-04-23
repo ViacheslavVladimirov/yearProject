@@ -2,7 +2,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QHeaderView, 
     QAbstractItemView, QFormLayout, QComboBox, 
-    QDateEdit, QDialog, QLineEdit, QLabel, QCompleter, QCheckBox
+    QDateEdit, QDialog, QLineEdit, QLabel, QCompleter, QCheckBox,
+    QMessageBox
 )
 from PyQt6.QtCore import Qt, QDate, pyqtSignal
 from PyQt6.QtGui import QIntValidator
@@ -24,10 +25,14 @@ class OrderItemDialog(QDialog):
         self.product_combo.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         
         for p in self.products:
-            self.product_combo.addItem(p['name'], p['price'])
+            # Store the whole product dict as data
+            self.product_combo.addItem(p['name'], p)
 
         self.price_input = QLineEdit()
         self.price_input.setReadOnly(True)
+
+        self.stock_input = QLineEdit()
+        self.stock_input.setReadOnly(True)
         
         self.amount_input = QLineEdit()
         self.amount_input.setText("1")
@@ -35,11 +40,12 @@ class OrderItemDialog(QDialog):
 
         layout.addRow("Product:", self.product_combo)
         layout.addRow("Price:", self.price_input)
+        layout.addRow("Available Stock:", self.stock_input)
         layout.addRow("Amount:", self.amount_input)
 
-        self.product_combo.currentIndexChanged.connect(self.update_price)
-        self.product_combo.currentTextChanged.connect(self.update_price)
-        self.update_price()
+        self.product_combo.currentIndexChanged.connect(self.update_product_info)
+        self.product_combo.currentTextChanged.connect(self.update_product_info)
+        self.update_product_info()
 
         button_layout = QHBoxLayout()
         self.save_btn = QPushButton("Add")
@@ -53,9 +59,32 @@ class OrderItemDialog(QDialog):
         
         layout.addRow(button_layout)
 
-    def update_price(self):
-        price = self.product_combo.currentData()
-        self.price_input.setText(str(price))
+    def update_product_info(self):
+        product = self.product_combo.currentData()
+        if product:
+            self.price_input.setText(str(product.get('price', 0.0)))
+            self.stock_input.setText(str(product.get('stock', 0)))
+        else:
+            self.price_input.setText("")
+            self.stock_input.setText("")
+
+    def accept(self):
+        product = self.product_combo.currentData()
+        if not product:
+            QMessageBox.warning(self, "Error", "Please select a valid product.")
+            return
+
+        try:
+            amount = int(self.amount_input.text())
+            stock = int(product.get('stock', 0))
+            if amount > stock:
+                QMessageBox.warning(self, "Insufficient Stock", f"Only {stock} items available in stock.")
+                return
+        except ValueError:
+            QMessageBox.warning(self, "Error", "Invalid amount.")
+            return
+
+        super().accept()
 
     def get_data(self):
         return {
