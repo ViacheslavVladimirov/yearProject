@@ -25,7 +25,6 @@ class OrderItemDialog(QDialog):
         self.product_combo.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         
         for p in self.products:
-            # Store the whole product dict as data
             self.product_combo.addItem(p['name'], p)
 
         self.price_input = QLineEdit()
@@ -87,7 +86,9 @@ class OrderItemDialog(QDialog):
         super().accept()
 
     def get_data(self):
+        product = self.product_combo.currentData()
         return {
+            'product_id': product.get('id') if product else None,
             'name': self.product_combo.currentText(),
             'price': self.price_input.text(),
             'amount': self.amount_input.text()
@@ -133,9 +134,10 @@ class OrderForm(QWidget):
 
         layout.addWidget(QLabel("Order Items:"))
         self.items_table = QTableWidget()
-        self.items_table.setColumnCount(3)
-        self.items_table.setHorizontalHeaderLabels(["Name", "Price", "Amount"])
+        self.items_table.setColumnCount(4) # Added hidden column for product_id
+        self.items_table.setHorizontalHeaderLabels(["Name", "Price", "Amount", "product_id"])
         self.items_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.items_table.setColumnHidden(3, True)
         self.items_table.verticalHeader().hide()
         self.items_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.items_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -196,6 +198,7 @@ class OrderForm(QWidget):
             self.items_table.setItem(row, 0, QTableWidgetItem(str(data['name'])))
             self.items_table.setItem(row, 1, QTableWidgetItem(str(data['price'])))
             self.items_table.setItem(row, 2, QTableWidgetItem(str(data['amount'])))
+            self.items_table.setItem(row, 3, QTableWidgetItem(str(data['product_id'])))
             self.calculate_total()
 
     def remove_item(self):
@@ -224,7 +227,9 @@ class OrderForm(QWidget):
 
     def set_data(self, order_data, customers, products):
         self.customer_combo.clear()
-        self.customer_combo.addItems(customers)
+        for c in customers:
+            self.customer_combo.addItem(c['name'], c['id'])
+        
         self.products = products
         self.items_table.setRowCount(0)
         
@@ -232,8 +237,14 @@ class OrderForm(QWidget):
             date_str = order_data.get('date', '')
             if date_str:
                 self.date_input.setDate(QDate.fromString(date_str, Qt.DateFormat.ISODate))
+
+            cid = order_data.get('customer_id')
+            cname = order_data.get('customer', '')
+            index = self.customer_combo.findData(cid)
+            if index < 0 and cid is not None:
+                self.customer_combo.addItem(f"{cname} (Inactive)", cid)
+                index = self.customer_combo.findData(cid)
             
-            index = self.customer_combo.findText(order_data.get('customer', ''))
             if index >= 0:
                 self.customer_combo.setCurrentIndex(index)
             
@@ -249,6 +260,7 @@ class OrderForm(QWidget):
                 self.items_table.setItem(row, 0, QTableWidgetItem(str(item.get('name', ''))))
                 self.items_table.setItem(row, 1, QTableWidgetItem(str(item.get('price', ''))))
                 self.items_table.setItem(row, 2, QTableWidgetItem(str(item.get('amount', ''))))
+                self.items_table.setItem(row, 3, QTableWidgetItem(str(item.get('product_id', ''))))
             
             self.calculate_total()
             self.update_delivered_status()
@@ -264,11 +276,12 @@ class OrderForm(QWidget):
             items.append({
                 'name': self.items_table.item(row, 0).text(),
                 'price': self.items_table.item(row, 1).text(),
-                'amount': self.items_table.item(row, 2).text()
+                'amount': self.items_table.item(row, 2).text(),
+                'product_id': self.items_table.item(row, 3).text()
             })
         return {
             'date': self.date_input.date().toString(Qt.DateFormat.ISODate),
-            'customer': self.customer_combo.currentText(),
+            'customer_id': self.customer_combo.currentData(),
             'payment': self.payment_combo.currentText(),
             'is_delivered': self.delivered_checkbox.isChecked(),
             'total': self.calculate_total(),

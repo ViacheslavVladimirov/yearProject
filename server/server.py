@@ -61,16 +61,25 @@ def handle_list(entity):
         return "ERROR DB connection failed"
     cursor = conn.cursor(dictionary=True)
     if entity == "PRODUCTS":
-        cursor.execute("SELECT * FROM products")
+        cursor.execute("SELECT * FROM products WHERE is_active = TRUE")
         results = cursor.fetchall()
     elif entity == "CUSTOMERS":
-        cursor.execute("SELECT * FROM customers")
+        cursor.execute("SELECT * FROM customers WHERE is_active = TRUE")
         results = cursor.fetchall()
     elif entity == "ORDERS":
-        cursor.execute("SELECT * FROM orders")
+        cursor.execute("""
+            SELECT orders.*, customers.name as customer_name 
+            FROM orders 
+            LEFT JOIN customers ON orders.customer_id = customers.id
+        """)
         results = cursor.fetchall()
         for order in results:
-            cursor.execute("SELECT product_name, price, amount FROM order_items WHERE order_id = %s", (order['id'],))
+            cursor.execute("""
+                SELECT order_items.*, products.name as product_name 
+                FROM order_items 
+                LEFT JOIN products ON order_items.product_id = products.id 
+                WHERE order_items.order_id = %s
+            """, (order['id'],))
             order['items'] = cursor.fetchall()
     else:
         conn.close()
@@ -90,27 +99,23 @@ def handle_create(entity, data_str):
     elif entity == "CUSTOMER":
         cursor.execute("INSERT INTO customers (name, email, phone) VALUES (%s, %s, %s)", (payload['name'], payload['email'], payload['phone']))
     elif entity == "ORDER":
-        required_stock = {}
         for item in payload.get('items', []):
-            name = item['product_name']
+            pid = item['product_id']
             amount = int(item['amount'])
-            required_stock[name] = required_stock.get(name, 0) + amount
-
-        for name, amount in required_stock.items():
-            cursor.execute("SELECT stock FROM products WHERE name = %s", (name,))
+            cursor.execute("SELECT stock FROM products WHERE id = %s", (pid,))
             product = cursor.fetchone()
             if not product:
                 conn.close()
-                return f"ERROR Product {name} not found"
+                return f"ERROR Product ID {pid} not found"
             if product[0] < amount:
                 conn.close()
-                return f"ERROR Insufficient stock for {name}"
+                return f"ERROR Insufficient stock for product ID {pid}"
 
-        cursor.execute("INSERT INTO orders (order_date, customer_name, payment_method, is_delivered, total_price) VALUES (%s, %s, %s, %s, %s)", (payload['date'], payload['customer'], payload['payment'], payload['is_delivered'], payload['total']))
+        cursor.execute("INSERT INTO orders (order_date, customer_id, payment_method, is_delivered, total_price) VALUES (%s, %s, %s, %s, %s)", (payload['date'], payload['customer_id'], payload['payment'], payload['is_delivered'], payload['total']))
         order_id = cursor.lastrowid
         for item in payload.get('items', []):
-            cursor.execute("INSERT INTO order_items (order_id, product_name, price, amount) VALUES (%s, %s, %s, %s)", (order_id, item['product_name'], item['price'], item['amount']))
-            cursor.execute("UPDATE products SET stock = stock - %s WHERE name = %s", (item['amount'], item['product_name']))
+            cursor.execute("INSERT INTO order_items (order_id, product_id, price, amount) VALUES (%s, %s, %s, %s)", (order_id, item['product_id'], item['price'], item['amount']))
+            cursor.execute("UPDATE products SET stock = stock - %s WHERE id = %s", (item['amount'], item['product_id']))
     conn.commit()
     conn.close()
     return "OK Created"
@@ -149,11 +154,21 @@ def handle_get(entity, entity_id=None):
         elif entity == "CUSTOMER":
             cursor.execute("SELECT * FROM customers WHERE id=%s", (entity_id,))
         elif entity == "ORDER":
-            cursor.execute("SELECT * FROM orders WHERE id=%s", (entity_id,))
+            cursor.execute("""
+                SELECT orders.*, customers.name as customer_name 
+                FROM orders 
+                LEFT JOIN customers ON orders.customer_id = customers.id 
+                WHERE orders.id=%s
+            """, (entity_id,))
         result = cursor.fetchone()
         if result:
             if entity == "ORDER":
-                cursor.execute("SELECT * FROM order_items WHERE order_id=%s", (entity_id,))
+                cursor.execute("""
+                    SELECT order_items.*, products.name as product_name 
+                    FROM order_items 
+                    LEFT JOIN products ON order_items.product_id = products.id 
+                    WHERE order_items.order_id=%s
+                """, (entity_id,))
                 result['items'] = cursor.fetchall()
             response = f"OK {json.dumps(result, cls=EnhancedJSONEncoder)}"
         else:
@@ -172,37 +187,33 @@ def handle_update(entity, entity_id, data_str):
     elif entity == "CUSTOMER":
         cursor.execute("UPDATE customers SET name=%s, email=%s, phone=%s WHERE id=%s", (payload['name'], payload['email'], payload['phone'], entity_id))
     elif entity == "ORDER":
-        cursor.execute("SELECT product_name, amount FROM order_items WHERE order_id = %s", (entity_id,))
+        cursor.execute("SELECT product_id, amount FROM order_items WHERE order_id = %s", (entity_id,))
         old_items = cursor.fetchall()
-        for item_name, amount in old_items:
-            cursor.execute("UPDATE products SET stock = stock + %s WHERE name = %s", (amount, item_name))
+        for pid, amount in old_items:
+            cursor.execute("UPDATE products SET stock = stock + %s WHERE id = %s", (amount, pid))
 
         if 'items' in payload:
-            required_stock = {}
             for item in payload['items']:
-                name = item['product_name']
+                pid = item['product_id']
                 amount = int(item['amount'])
-                required_stock[name] = required_stock.get(name, 0) + amount
-
-            for name, amount in required_stock.items():
-                cursor.execute("SELECT stock FROM products WHERE name = %s", (name,))
+                cursor.execute("SELECT stock FROM products WHERE id = %s", (pid,))
                 product = cursor.fetchone()
                 if not product:
                     conn.rollback()
                     conn.close()
-                    return f"ERROR Product {name} not found"
+                    return f"ERROR Product ID {pid} not found"
                 if product[0] < amount:
                     conn.rollback()
                     conn.close()
-                    return f"ERROR Insufficient stock for {name}"
+                    return f"ERROR Insufficient stock for product ID {pid}"
 
-            cursor.execute("UPDATE orders SET order_date=%s, customer_name=%s, payment_method=%s, is_delivered=%s, total_price=%s WHERE id=%s", (payload['date'], payload['customer'], payload['payment'], payload['is_delivered'], payload['total'], entity_id))
+            cursor.execute("UPDATE orders SET order_date=%s, customer_id=%s, payment_method=%s, is_delivered=%s, total_price=%s WHERE id=%s", (payload['date'], payload['customer_id'], payload['payment'], payload['is_delivered'], payload['total'], entity_id))
             cursor.execute("DELETE FROM order_items WHERE order_id = %s", (entity_id,))
             for item in payload['items']:
-                cursor.execute("INSERT INTO order_items (order_id, product_name, price, amount) VALUES (%s, %s, %s, %s)", (entity_id, item['product_name'], item['price'], item['amount']))
-                cursor.execute("UPDATE products SET stock = stock - %s WHERE name = %s", (item['amount'], item['product_name']))
+                cursor.execute("INSERT INTO order_items (order_id, product_id, price, amount) VALUES (%s, %s, %s, %s)", (entity_id, item['product_id'], item['price'], item['amount']))
+                cursor.execute("UPDATE products SET stock = stock - %s WHERE id = %s", (item['amount'], item['product_id']))
         else:
-            cursor.execute("UPDATE orders SET order_date=%s, customer_name=%s, payment_method=%s, is_delivered=%s, total_price=%s WHERE id=%s", (payload['date'], payload['customer'], payload['payment'], payload['is_delivered'], payload['total'], entity_id))
+            cursor.execute("UPDATE orders SET order_date=%s, customer_id=%s, payment_method=%s, is_delivered=%s, total_price=%s WHERE id=%s", (payload['date'], payload['customer_id'], payload['payment'], payload['is_delivered'], payload['total'], entity_id))
     conn.commit()
     conn.close()
     return "OK Updated"
@@ -213,14 +224,14 @@ def handle_delete(entity, entity_id):
         return "ERROR DB connection failed"
     cursor = conn.cursor()
     if entity == "PRODUCT":
-        cursor.execute("DELETE FROM products WHERE id=%s", (entity_id,))
+        cursor.execute("UPDATE products SET is_active = FALSE WHERE id=%s", (entity_id,))
     elif entity == "CUSTOMER":
-        cursor.execute("DELETE FROM customers WHERE id=%s", (entity_id,))
+        cursor.execute("UPDATE customers SET is_active = FALSE WHERE id=%s", (entity_id,))
     elif entity == "ORDER":
-        cursor.execute("SELECT product_name, amount FROM order_items WHERE order_id = %s", (entity_id,))
+        cursor.execute("SELECT product_id, amount FROM order_items WHERE order_id = %s", (entity_id,))
         items = cursor.fetchall()
-        for item_name, amount in items:
-            cursor.execute("UPDATE products SET stock = stock + %s WHERE name = %s", (amount, item_name))
+        for pid, amount in items:
+            cursor.execute("UPDATE products SET stock = stock + %s WHERE id = %s", (amount, pid))
         cursor.execute("DELETE FROM orders WHERE id=%s", (entity_id,))
     conn.commit()
     conn.close()

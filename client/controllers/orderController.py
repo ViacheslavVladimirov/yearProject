@@ -38,6 +38,7 @@ class OrderController:
                 'id': ro.get('id'),
                 'date': str(ro.get('order_date', '')),
                 'customer': ro.get('customer_name', ''),
+                'customer_id': ro.get('customer_id'),
                 'payment': ro.get('payment_method', ''),
                 'is_delivered': bool(ro.get('is_delivered', False)),
                 'total': float(ro.get('total_price', 0.0))
@@ -47,6 +48,7 @@ class OrderController:
             for item in ro.get('items', []):
                 processed_items.append({
                     'name': item.get('product_name', ''),
+                    'product_id': item.get('product_id'),
                     'price': float(item.get('price', 0.0)),
                     'amount': int(item.get('amount', 0))
                 })
@@ -64,13 +66,12 @@ class OrderController:
         self.current_order_id = None
         
         c_res = get_all_customers()
-        raw_customers = self._handle_api_response(c_res, None) or []
-        customers = [c.get('name', '') for c in raw_customers]
+        customers = self._handle_api_response(c_res, None) or []
         
         p_res = get_all_products()
-        raw_products = self._handle_api_response(p_res, None) or []
+        products = self._handle_api_response(p_res, None) or []
         
-        self.view.show_form(None, customers, raw_products)
+        self.view.show_form(None, customers, products)
 
     def on_view_requested(self, order_id):
         self.current_order_id = order_id
@@ -79,26 +80,25 @@ class OrderController:
         
         if order_data:
             c_res = get_all_customers()
-            raw_customers = self._handle_api_response(c_res, None) or []
-            customers = [c.get('name', '') for c in raw_customers]
+            customers = self._handle_api_response(c_res, None) or []
             
             p_res = get_all_products()
-            raw_products = self._handle_api_response(p_res, None) or []
+            products = self._handle_api_response(p_res, None) or []
             
-            self.view.show_view_mode(order_data, customers, raw_products)
+            self.view.show_view_mode(order_data, customers, products)
 
     def on_save_requested(self, data):
         items = []
         for item in data.get('items', []):
             items.append({
-                'product_name': item['name'],
+                'product_id': item['product_id'],
                 'price': item['price'],
                 'amount': item['amount']
             })
         
         payload = {
             'date': data['date'],
-            'customer': data['customer'],
+            'customer_id': data['customer_id'],
             'payment': data['payment'],
             'is_delivered': data['is_delivered'],
             'total': data['total'],
@@ -140,14 +140,14 @@ class OrderController:
                 items = []
                 for item in order_data.get('items', []):
                     items.append({
-                        'product_name': item['name'],
+                        'product_id': item['product_id'],
                         'price': item['price'],
                         'amount': item['amount']
                     })
 
                 payload = {
                     'date': order_data['date'],
-                    'customer': order_data['customer'],
+                    'customer_id': order_data['customer_id'],
                     'payment': order_data['payment'],
                     'is_delivered': order_data['is_delivered'],
                     'total': order_data['total'],
@@ -159,10 +159,9 @@ class OrderController:
                     self.update_view()
 
                     c_res = get_all_customers()
-                    raw_customers = self._handle_api_response(c_res, None) or []
-                    customers = [c.get('name', '') for c in raw_customers]
+                    customers = self._handle_api_response(c_res, None) or []
                     
                     p_res = get_all_products()
-                    raw_products = self._handle_api_response(p_res, None) or []
+                    products = self._handle_api_response(p_res, None) or []
                     
-                    self.view.show_view_mode(order_data, customers, raw_products)
+                    self.view.show_view_mode(order_data, customers, products)
