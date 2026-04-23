@@ -122,7 +122,7 @@ class OrderController:
     def on_collect_requested(self):
         if self.current_order_id is not None:
             orders = self.get_orders_processed()
-            order_data = next((o for o in orders if o['id'] == self.current_order_id), None)
+            order_data = next((order for order in orders if order['id'] == self.current_order_id), None)
             
             if order_data:
                 current_payment = order_data.get('payment', 'None')

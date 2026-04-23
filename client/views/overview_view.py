@@ -13,7 +13,6 @@ class OverviewView(QWidget):
         title.setStyleSheet("font-size: 24px; font-weight: bold; margin-bottom: 20px;")
         layout.addWidget(title)
 
-        # Date Filter
         filter_layout = QHBoxLayout()
         filter_layout.addWidget(QLabel("Start Date:"))
         self.start_date_edit = QDateEdit()
@@ -34,12 +33,10 @@ class OverviewView(QWidget):
         layout.addLayout(filter_layout)
 
         grid = QGridLayout()
-        
-        # Products Sold Card
+
         self.products_sold_label = QLabel("0")
         grid.addWidget(self.create_stat_card("Products Sold", self.products_sold_label), 0, 0)
-        
-        # Total Revenue Card
+
         self.revenue_label = QLabel("€ 0.00")
         grid.addWidget(self.create_stat_card("Total Revenue", self.revenue_label), 0, 1)
         

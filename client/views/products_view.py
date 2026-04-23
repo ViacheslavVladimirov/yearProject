@@ -24,11 +24,9 @@ class ProductsView(QWidget):
         self.stack = QStackedWidget()
         self.main_layout.addWidget(self.stack)
 
-        # Page 1: Table View
         self.table_page = QWidget()
         table_layout = QVBoxLayout(self.table_page)
 
-        # Search Bar
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Search:"))
         self.search_input = QLineEdit()
@@ -61,8 +59,7 @@ class ProductsView(QWidget):
 
         table_layout.addWidget(self.products_table)
         table_layout.addLayout(button_layout)
-        
-        # Page 2: Form View
+
         self.form_page = ProductForm(
             on_save=lambda: self.save_requested.emit(self.form_page.get_data()), 
             on_cancel=lambda: self.cancel_requested.emit()
@@ -71,7 +68,6 @@ class ProductsView(QWidget):
         self.stack.addWidget(self.table_page)
         self.stack.addWidget(self.form_page)
 
-        # Connect signals
         self.products_table.itemSelectionChanged.connect(self.update_buttons_state)
         self.add_prod_btn.clicked.connect(self.add_requested.emit)
         self.edit_prod_btn.clicked.connect(self._on_edit_clicked)
@@ -116,13 +112,11 @@ class ProductsView(QWidget):
             name_item = QTableWidgetItem(str(product['name']))
             name_item.setData(Qt.ItemDataRole.UserRole, product['id'])
             self.products_table.setItem(row, 0, name_item)
-            
-            # Price Column
+
             price_item = QTableWidgetItem()
             price_item.setData(Qt.ItemDataRole.DisplayRole, float(product.get('price', 0.0)))
             self.products_table.setItem(row, 1, price_item)
-            
-            # Stock Column
+
             stock_item = QTableWidgetItem()
             stock_item.setData(Qt.ItemDataRole.DisplayRole, int(product.get('stock', 0)))
             self.products_table.setItem(row, 2, stock_item)

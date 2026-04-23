@@ -25,11 +25,9 @@ class OrdersView(QWidget):
         self.stack = QStackedWidget()
         self.main_layout.addWidget(self.stack)
 
-        # Page 1: Table View
         self.table_page = QWidget()
         table_layout = QVBoxLayout(self.table_page)
 
-        # Search Bar
         search_layout = QHBoxLayout()
         search_layout.addWidget(QLabel("Search:"))
         self.search_input = QLineEdit()
@@ -62,8 +60,7 @@ class OrdersView(QWidget):
 
         table_layout.addWidget(self.orders_table)
         table_layout.addLayout(button_layout)
-        
-        # Page 2: Form View
+
         self.form_page = OrderForm(
             on_save=lambda: self.save_requested.emit(self.form_page.get_data()), 
             on_cancel=lambda: self.cancel_requested.emit(),
@@ -73,7 +70,6 @@ class OrdersView(QWidget):
         self.stack.addWidget(self.table_page)
         self.stack.addWidget(self.form_page)
 
-        # Connect signals
         self.orders_table.itemSelectionChanged.connect(self.update_buttons_state)
         self.add_order_btn.clicked.connect(self.add_requested.emit)
         self.view_order_btn.clicked.connect(self._on_view_clicked)
@@ -94,7 +90,6 @@ class OrdersView(QWidget):
         self.orders_table.setSortingEnabled(False)
         self.orders_table.setRowCount(len(orders))
         for row, order in enumerate(orders):
-            # ID Column
             id_item = QTableWidgetItem()
             id_item.setData(Qt.ItemDataRole.DisplayRole, order.get('id', 0))
             self.orders_table.setItem(row, 0, id_item)
@@ -105,8 +100,7 @@ class OrdersView(QWidget):
             
             delivered_text = "Yes" if order.get('is_delivered') else "No"
             self.orders_table.setItem(row, 4, QTableWidgetItem(delivered_text))
-            
-            # Total Price Column
+
             total = float(order.get('total', 0.0))
             total_item = QTableWidgetItem()
             total_item.setData(Qt.ItemDataRole.DisplayRole, total)
@@ -139,12 +133,10 @@ class OrdersView(QWidget):
         search_text = self.search_input.text().lower()
         
         for row in range(self.orders_table.rowCount()):
-            # 1. Check Pending Filter
             delivered_item = self.orders_table.item(row, 4)
             is_delivered = delivered_item.text() == "Yes" if delivered_item else False
             hide_by_pending = only_pending and is_delivered
-            
-            # 2. Check Search Text
+
             match_search = False
             if not search_text:
                 match_search = True
